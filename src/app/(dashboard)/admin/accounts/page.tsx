@@ -1,0 +1,243 @@
+"use client"
+
+import { useState, useMemo } from "react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Search, Pencil, Trash2 } from "lucide-react"
+import { cn } from "@/lib/utils"
+
+type Role = "Admin" | "Nurse" | "Doctor"
+type Status = "Active" | "Inactive"
+
+type Account = {
+  id: string
+  name: string
+  email: string
+  role: Role
+  status: Status
+  createdAt: string
+}
+
+const mockAccounts: Account[] = [
+  { id: "1",  name: "Dr. Kim Minjun",  email: "kim.mj@hospital.com",   role: "Admin",  status: "Active",   createdAt: "2026-01-15" },
+  { id: "2",  name: "Park Soyeon",     email: "park.sy@hospital.com",  role: "Nurse",  status: "Active",   createdAt: "2026-02-01" },
+  { id: "3",  name: "Lee Jihoon",      email: "lee.jh@hospital.com",   role: "Doctor", status: "Active",   createdAt: "2026-02-10" },
+  { id: "4",  name: "Choi Yuna",       email: "choi.yn@hospital.com",  role: "Nurse",  status: "Active",   createdAt: "2026-02-20" },
+  { id: "5",  name: "Jung Doyoon",     email: "jung.dy@hospital.com",  role: "Doctor", status: "Inactive", createdAt: "2026-03-01" },
+  { id: "6",  name: "Kang Haein",      email: "kang.he@hospital.com",  role: "Nurse",  status: "Active",   createdAt: "2026-03-05" },
+  { id: "7",  name: "Yoon Seojin",     email: "yoon.sj@hospital.com",  role: "Admin",  status: "Active",   createdAt: "2026-03-10" },
+  { id: "8",  name: "Hwang Jiwoo",     email: "hwang.jw@hospital.com", role: "Doctor", status: "Active",   createdAt: "2026-03-15" },
+  { id: "9",  name: "Son Minji",       email: "son.mj@hospital.com",   role: "Nurse",  status: "Active",   createdAt: "2026-03-16" },
+  { id: "10", name: "Lim Chanwoo",     email: "lim.cw@hospital.com",   role: "Doctor", status: "Active",   createdAt: "2026-03-17" },
+  { id: "11", name: "Oh Jiyeon",       email: "oh.jy@hospital.com",    role: "Admin",  status: "Inactive", createdAt: "2026-03-18" },
+  { id: "12", name: "Bae Sunghoon",    email: "bae.sh@hospital.com",   role: "Nurse",  status: "Active",   createdAt: "2026-03-19" },
+  { id: "13", name: "Shin Hyunwoo",    email: "shin.hw@hospital.com",  role: "Doctor", status: "Active",   createdAt: "2026-03-20" },
+  { id: "14", name: "Han Jisoo",       email: "han.js@hospital.com",   role: "Nurse",  status: "Active",   createdAt: "2026-03-21" },
+  { id: "15", name: "Ko Eunji",        email: "ko.ej@hospital.com",    role: "Doctor", status: "Active",   createdAt: "2026-03-22" },
+  { id: "16", name: "Jeon Hyebin",     email: "jeon.hb@hospital.com",  role: "Admin",  status: "Active",   createdAt: "2026-03-23" },
+  { id: "17", name: "Moon Sehun",      email: "moon.sh@hospital.com",  role: "Nurse",  status: "Inactive", createdAt: "2026-03-24" },
+  { id: "18", name: "Ryu Jeonghoon",   email: "ryu.jh@hospital.com",   role: "Doctor", status: "Active",   createdAt: "2026-03-25" },
+  { id: "19", name: "Nam Dawon",       email: "nam.dw@hospital.com",   role: "Nurse",  status: "Active",   createdAt: "2026-03-25" },
+  { id: "20", name: "Yoo Jaehyun",     email: "yoo.jh@hospital.com",   role: "Doctor", status: "Active",   createdAt: "2026-03-26" },
+  { id: "21", name: "Kwon Nara",       email: "kwon.nr@hospital.com",  role: "Nurse",  status: "Active",   createdAt: "2026-03-26" },
+  { id: "22", name: "Cha Eunwoo",      email: "cha.ew@hospital.com",   role: "Admin",  status: "Active",   createdAt: "2026-03-26" },
+  { id: "23", name: "Woo Joohyun",     email: "woo.jh@hospital.com",   role: "Doctor", status: "Active",   createdAt: "2026-03-27" },
+  { id: "24", name: "Im Nayeon",       email: "im.ny@hospital.com",    role: "Nurse",  status: "Active",   createdAt: "2026-03-27" },
+]
+
+const ROLE_FILTERS = ["All", "Admin", "Nurse", "Doctor"] as const
+const PAGE_SIZE = 8
+
+const roleBadgeClass: Record<Role, string> = {
+  Admin:  "bg-[#eff6ff] text-[#2563eb] border-0",
+  Nurse:  "bg-[#dcfce7] text-[#16a34a] border-0",
+  Doctor: "bg-[#ede9fe] text-[#a78bfb] border-0",
+}
+
+const statusBadgeClass: Record<Status, string> = {
+  Active:   "bg-[#dcfce7] text-[#16a34a] border-0",
+  Inactive: "bg-[#f3f4f6] text-[#9ca3af] border-0",
+}
+
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .slice(0, 2)
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+}
+
+export default function AccountsPage() {
+  const [search, setSearch] = useState("")
+  const [selectedRole, setSelectedRole] = useState<string>("All")
+  const [currentPage, setCurrentPage] = useState(1)
+
+  const filtered = useMemo(() => {
+    return mockAccounts.filter((a) => {
+      const matchesSearch =
+        search === "" ||
+        a.name.toLowerCase().includes(search.toLowerCase()) ||
+        a.email.toLowerCase().includes(search.toLowerCase())
+      const matchesRole = selectedRole === "All" || a.role === selectedRole
+      return matchesSearch && matchesRole
+    })
+  }, [search, selectedRole])
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const start = (currentPage - 1) * PAGE_SIZE
+  const paginated = filtered.slice(start, start + PAGE_SIZE)
+
+  function handleRoleChange(role: string) {
+    setSelectedRole(role)
+    setCurrentPage(1)
+  }
+
+  function handleSearchChange(value: string) {
+    setSearch(value)
+    setCurrentPage(1)
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-[#111827]">Account Management</h1>
+          <p className="text-sm text-[#4b5563]">Manage hospital staff accounts and permissions</p>
+        </div>
+        <Button className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white">
+          + Add Member
+        </Button>
+      </div>
+
+      <Card className="border border-[#e5e7eb] rounded-xl shadow-sm">
+        <CardContent className="p-0">
+          {/* Toolbar */}
+          <div className="flex items-center justify-between gap-4 px-4 py-3 border-b border-[#e5e7eb]">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2 size-4 text-[#9ca3af] pointer-events-none" />
+              <Input
+                placeholder="Search by name or email..."
+                className="pl-8 w-[300px] h-8 border-[#d1d5db]"
+                value={search}
+                onChange={(e) => handleSearchChange(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-2">
+              {ROLE_FILTERS.map((role) => (
+                <button
+                  key={role}
+                  onClick={() => handleRoleChange(role)}
+                  className={cn(
+                    "px-3 py-1 rounded-full text-sm font-medium transition-colors",
+                    selectedRole === role
+                      ? "bg-[#2563eb] text-white"
+                      : "bg-white border border-[#d1d5db] text-[#4b5563] hover:bg-[#f9fafb]"
+                  )}
+                >
+                  {role}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Table */}
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-[#f9fafb] hover:bg-[#f9fafb] border-b border-[#e5e7eb]">
+                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Name</TableHead>
+                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Email</TableHead>
+                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Role</TableHead>
+                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Status</TableHead>
+                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Created</TableHead>
+                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginated.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="px-4 py-12 text-center text-[#9ca3af]">
+                    No accounts found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginated.map((account, idx) => (
+                  <TableRow
+                    key={account.id}
+                    className={cn(
+                      "border-b border-[#e5e7eb]",
+                      idx % 2 === 1 ? "bg-[#f9fafb]" : "bg-white"
+                    )}
+                  >
+                    <TableCell className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="size-7">
+                          <AvatarFallback className="text-xs bg-[#eff6ff] text-[#2563eb]">
+                            {getInitials(account.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium text-[#111827]">{account.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-[#4b5563]">{account.email}</TableCell>
+                    <TableCell className="px-4 py-3">
+                      <Badge className={roleBadgeClass[account.role]}>{account.role}</Badge>
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      <Badge className={statusBadgeClass[account.status]}>{account.status}</Badge>
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-[#4b5563]">{account.createdAt}</TableCell>
+                    <TableCell className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="size-8 text-[#2563eb] hover:text-[#1d4ed8]">
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="size-8 text-[#dc2626] hover:text-[#b91c1c]">
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between px-4 py-3 border-t border-[#e5e7eb]">
+            <span className="text-sm text-[#6b7280]">
+              Showing {filtered.length === 0 ? 0 : start + 1}-{Math.min(start + PAGE_SIZE, filtered.length)} of {filtered.length} members
+            </span>
+            <div className="flex gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={cn(
+                    "size-8 rounded text-sm font-medium transition-colors",
+                    currentPage === page
+                      ? "bg-[#2563eb] text-white"
+                      : "bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
+                  )}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
