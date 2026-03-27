@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/table"
 import { Search, Pencil, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { getVisiblePages } from "@/lib/pagination"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 
 type Role = "Admin" | "Nurse" | "Doctor"
 type Status = "Active" | "Inactive"
@@ -219,21 +221,39 @@ export default function AccountsPage() {
             <span className="text-sm text-[#6b7280]">
               Showing {filtered.length === 0 ? 0 : start + 1}-{Math.min(start + PAGE_SIZE, filtered.length)} of {filtered.length} members
             </span>
-            <div className="flex gap-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={cn(
-                    "size-8 rounded text-sm font-medium transition-colors",
-                    currentPage === page
-                      ? "bg-[#2563eb] text-white"
-                      : "bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
-                  )}
-                >
-                  {page}
-                </button>
-              ))}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="size-8 rounded flex items-center justify-center text-sm transition-colors bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb] disabled:opacity-40 disabled:pointer-events-none"
+              >
+                <ChevronLeft className="size-4" />
+              </button>
+              {getVisiblePages(currentPage, totalPages).map((page, i) =>
+                page === "..." ? (
+                  <span key={`ellipsis-${i}`} className="size-8 flex items-center justify-center text-sm text-[#9ca3af]">...</span>
+                ) : (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={cn(
+                      "size-8 rounded text-sm font-medium transition-colors",
+                      currentPage === page
+                        ? "bg-[#2563eb] text-white"
+                        : "bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
+                    )}
+                  >
+                    {page}
+                  </button>
+                )
+              )}
+              <button
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="size-8 rounded flex items-center justify-center text-sm transition-colors bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb] disabled:opacity-40 disabled:pointer-events-none"
+              >
+                <ChevronRight className="size-4" />
+              </button>
             </div>
           </div>
         </CardContent>
