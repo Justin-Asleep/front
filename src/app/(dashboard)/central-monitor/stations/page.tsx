@@ -26,10 +26,10 @@ type Station = {
 }
 
 const mockStations: Station[] = [
-  { id: "1", name: "Station Alpha", hospital: "Seoul General Hospital", ward: "Internal Medicine", urlKey: "sta_a1b2c3d4e5f6g7h8", status: "Active" },
-  { id: "2", name: "Station Beta",  hospital: "Seoul General Hospital", ward: "Surgery",           urlKey: "sta_b2c3d4e5f6g7h8i9", status: "Active" },
-  { id: "3", name: "Station Gamma", hospital: "Busan Medical Center",   ward: "ICU",               urlKey: "sta_c3d4e5f6g7h8i9j0", status: "Active" },
-  { id: "4", name: "Station Delta", hospital: "Incheon St. Mary's",     ward: "Pediatrics",        urlKey: "sta_d4e5f6g7h8i9j0k1", status: "Inactive" },
+  { id: "1", name: "Internal Med Station", hospital: "Seoul General", ward: "Internal Medicine", urlKey: "c4d2e891f3a6b7c2e5d1b", status: "Active" },
+  { id: "2", name: "Surgery Station",      hospital: "Seoul General", ward: "Surgery",           urlKey: "a9f1b374d8c2e5f3a7b8e", status: "Active" },
+  { id: "3", name: "ICU Station",          hospital: "Yonsei Med",    ward: "ICU",               urlKey: "e7c3d628a1f4b9e6c2d5a", status: "Active" },
+  { id: "4", name: "ER Station",           hospital: "Asan Med",      ward: "Emergency",         urlKey: "b1a4f952e6c3d7b8f2a6c", status: "Inactive" },
 ]
 
 const statusBadgeClass: Record<StationStatus, string> = {
@@ -50,8 +50,8 @@ export default function StationsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[#111827]">Station Management</h1>
-          <p className="text-sm text-[#4b5563]">Manage nursing stations and their URL keys</p>
+          <h1 className="text-2xl font-bold tracking-tight text-[#111827]">Station Registration</h1>
+          <p className="text-sm text-[#4b5563]">Manage nurse station displays</p>
         </div>
         <Button className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white">
           + Add Station
@@ -85,7 +85,7 @@ export default function StationsPage() {
                   <TableCell className="px-4 py-3 text-[#4b5563]">{station.ward}</TableCell>
                   <TableCell className="px-4 py-3">
                     <div className="bg-[#f9fafb] rounded-[6px] flex items-center justify-between px-2.5 h-7 w-[220px]">
-                      <span className="text-xs text-[#374151] truncate max-w-[140px]">{station.urlKey}</span>
+                      <span className="font-mono text-xs text-[#374151] truncate max-w-[140px]">{station.urlKey}</span>
                       <button
                         onClick={() => handleCopy(station.id, station.urlKey)}
                         className="text-xs text-[#2563eb] hover:text-[#1d4ed8] font-medium ml-2 shrink-0"

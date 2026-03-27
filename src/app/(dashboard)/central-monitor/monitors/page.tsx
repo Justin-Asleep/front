@@ -27,11 +27,11 @@ type Monitor = {
 }
 
 const mockMonitors: Monitor[] = [
-  { id: "1", name: "Monitor A", hospital: "Seoul General Hospital", urlKey: "mon_a1b2c3d4e5f6g7h8", beds: 6, status: "Active" },
-  { id: "2", name: "Monitor B", hospital: "Seoul General Hospital", urlKey: "mon_b2c3d4e5f6g7h8i9", beds: 4, status: "Active" },
-  { id: "3", name: "Monitor C", hospital: "Busan Medical Center",   urlKey: "mon_c3d4e5f6g7h8i9j0", beds: 8, status: "Active" },
-  { id: "4", name: "Monitor D", hospital: "Incheon St. Mary's",     urlKey: "mon_d4e5f6g7h8i9j0k1", beds: 6, status: "Inactive" },
-  { id: "5", name: "Monitor E", hospital: "Daegu University Hosp",  urlKey: "mon_e5f6g7h8i9j0k1l2", beds: 4, status: "Active" },
+  { id: "1", name: "ICU Monitor",    hospital: "Seoul General", urlKey: "a3f8c2d1e5b6f7a2d9e4b", beds: 6, status: "Active" },
+  { id: "2", name: "Ward A Monitor", hospital: "Seoul General", urlKey: "b7e2f194c3a8d5e1f6b3c", beds: 4, status: "Active" },
+  { id: "3", name: "ER Monitor",     hospital: "Seoul General", urlKey: "d1c9a847b2e3f6a1c8d5f", beds: 3, status: "Active" },
+  { id: "4", name: "Ward B Monitor", hospital: "Yonsei Med",    urlKey: "e4b6d823f1a9c7e2b4d7a", beds: 4, status: "Active" },
+  { id: "5", name: "Rehab Monitor",  hospital: "Asan Med",      urlKey: "f2a1e956d4b8c3f7e1a8d", beds: 2, status: "Inactive" },
 ]
 
 const statusBadgeClass: Record<MonitorStatus, string> = {
@@ -52,8 +52,8 @@ export default function MonitorsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[#111827]">Monitor Management</h1>
-          <p className="text-sm text-[#4b5563]">Manage central monitors and their URL keys</p>
+          <h1 className="text-2xl font-bold tracking-tight text-[#111827]">Monitor Registration</h1>
+          <p className="text-sm text-[#4b5563]">Manage dashboard monitors and their configurations</p>
         </div>
         <Button className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white">
           + Add Monitor
@@ -86,7 +86,7 @@ export default function MonitorsPage() {
                   <TableCell className="px-4 py-3 text-[#4b5563]">{monitor.hospital}</TableCell>
                   <TableCell className="px-4 py-3">
                     <div className="bg-[#f9fafb] rounded-[6px] flex items-center justify-between px-2.5 h-7 w-[240px]">
-                      <span className="text-xs text-[#374151] truncate max-w-[160px]">{monitor.urlKey}</span>
+                      <span className="font-mono text-xs text-[#374151] truncate max-w-[160px]">{monitor.urlKey}</span>
                       <button
                         onClick={() => handleCopy(monitor.id, monitor.urlKey)}
                         className="text-xs text-[#2563eb] hover:text-[#1d4ed8] font-medium ml-2 shrink-0"

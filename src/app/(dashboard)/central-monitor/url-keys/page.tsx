@@ -87,7 +87,7 @@ export default function UrlKeysPage() {
                 key={type}
                 onClick={() => setSelectedType(type)}
                 className={cn(
-                  "px-3 py-1 rounded-full text-sm font-medium transition-colors",
+                  "px-3 h-[30px] rounded-[6px] text-sm font-medium transition-colors",
                   selectedType === type
                     ? "bg-[#2563eb] text-white"
                     : "bg-white border border-[#d1d5db] text-[#4b5563] hover:bg-[#f9fafb]"
@@ -128,10 +128,10 @@ export default function UrlKeysPage() {
                         {item.urlKey}
                       </span>
                       <button
-                        onClick={() => handleCopy(item.urlKey)}
+                        onClick={() => handleCopy(item.id, item.urlKey)}
                         className="text-xs text-[#2563eb] font-medium shrink-0 hover:text-[#1d4ed8]"
                       >
-                        Copy
+                        {copiedId === item.id ? "Copied!" : "Copy"}
                       </button>
                     </div>
                   </TableCell>
