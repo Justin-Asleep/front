@@ -247,7 +247,7 @@ function VitalCell({ label, value, color }: { label: string; value: string | num
   const displayVal = value != null ? String(value) : "--"
   return (
     <div className="flex flex-col gap-[2px]">
-      <span className="text-[9px] text-[#6b737d]">{label}</span>
+      <span className="text-[10px] text-[#4b5563]">{label}</span>
       <span className="text-[15px] font-bold leading-none" style={{ color }}>
         {displayVal}
       </span>
@@ -261,9 +261,9 @@ function SensorBattery({ label, pct }: { label: string; pct: number | undefined 
   const fillColor = isOff ? "transparent" : pct! >= 60 ? "#16a34a" : pct! >= 30 ? "#f97316" : "#ef4444"
   return (
     <div className="flex items-center gap-0.5">
-      <span className={cn("text-[8px] font-medium", isOff ? "text-[#a1a8b2]" : "text-[#38404a]")}>{label}</span>
+      <span className={cn("text-[9px] font-medium", isOff ? "text-[#a1a8b2]" : "text-[#38404a]")}>{label}</span>
       <BatteryMedium className={cn("size-[10px]", isOff ? "text-[#a1a8b2]" : "text-[#6b737d]")} />
-      <span className={cn("text-[8px]", isOff ? "text-[#a1a8b2]" : "text-[#6b737d]")}>
+      <span className={cn("text-[9px]", isOff ? "text-[#a1a8b2]" : "text-[#4b5563]")}>
         {isOff ? "--" : `${pct}%`}
       </span>
     </div>
@@ -272,7 +272,7 @@ function SensorBattery({ label, pct }: { label: string; pct: number | undefined 
 
 function EmptyBedCard({ bed }: { bed: StationBed }) {
   return (
-    <div className={cn("rounded-[8px] min-h-[168px] overflow-hidden relative flex", cardBorder.empty, cardBg.empty)}>
+    <div className={cn("rounded-[8px] min-h-[168px] overflow-hidden relative flex cursor-default", cardBorder.empty, cardBg.empty)}>
       <div className="w-1 flex-shrink-0 bg-[#d4d7dc]" />
       <div className="flex flex-col justify-center px-3 py-3">
         <p className="text-[12px] font-medium text-[#6b737d]">{bed.bed}</p>
@@ -295,9 +295,14 @@ function OccupiedBedCard({ bed, onClick }: { bed: StationBed; onClick: () => voi
 
   return (
     <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick() } }}
+      aria-label={`${bed.bed} - ${bed.patient}`}
       className={cn(
         "rounded-[8px] min-h-[168px] overflow-hidden relative flex cursor-pointer",
+        "hover:shadow-md focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:outline-none transition-shadow duration-200",
         cardBorder[bed.status],
         cardBg[bed.status]
       )}
@@ -420,7 +425,7 @@ export default function RealtimeStationPage() {
         {/* Alarm History button */}
         <button
           onClick={() => setHistoryOpen(true)}
-          className="ml-auto h-8 w-[140px] flex items-center justify-center gap-1.5 rounded-[6px] border border-[#e8ebed] bg-white hover:bg-[#f9fafb]"
+          className="ml-auto h-10 px-4 flex items-center justify-center gap-1.5 rounded-[6px] border border-[#e8ebed] bg-white hover:bg-[#f9fafb] focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:outline-none transition-colors duration-200"
         >
           <span className="text-[12px] font-medium text-[#2563eb]">Alarm History</span>
           {alarmCount > 0 && (
@@ -432,7 +437,7 @@ export default function RealtimeStationPage() {
       </div>
 
       {/* Bed card grid */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {beds.map((bed) =>
           bed.status === "empty" ? (
             <EmptyBedCard key={bed.id} bed={bed} />
