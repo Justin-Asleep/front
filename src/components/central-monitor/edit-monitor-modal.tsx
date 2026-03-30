@@ -21,6 +21,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { GripVerticalIcon } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 const LAYOUT_OPTIONS = [
   { value: "2x2", label: "2 × 2 (4 beds)" },
@@ -67,6 +68,7 @@ type Props = {
 }
 
 export function EditMonitorModal({ open, onOpenChange, monitor, onSubmit }: Props) {
+  const [activeTab, setActiveTab] = useState("info")
   const [name, setName] = useState(monitor.name)
   const [layout, setLayout] = useState(monitor.layout)
   const [active, setActive] = useState(monitor.status === "Active")
@@ -147,7 +149,10 @@ export function EditMonitorModal({ open, onOpenChange, monitor, onSubmit }: Prop
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-[800px] w-full p-0 rounded-2xl overflow-hidden"
+        className={cn(
+          "w-full p-0 rounded-2xl overflow-hidden transition-[max-width] duration-300",
+          activeTab === "bed-mapping" ? "sm:max-w-[800px]" : "sm:max-w-[520px]"
+        )}
         showCloseButton={false}
       >
         {/* Header */}
@@ -172,7 +177,7 @@ export function EditMonitorModal({ open, onOpenChange, monitor, onSubmit }: Prop
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="info" className="px-8 pt-2 pb-0">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as string)} className="px-8 pt-2 pb-0">
           <TabsList variant="line" className="w-full justify-start gap-0 h-auto pb-0 bg-transparent border-b border-[#e8ebed]">
             <TabsTrigger
               value="info"
