@@ -35,11 +35,13 @@ export function ConfirmDeleteDialog({
           <h2 className="text-xl font-bold text-[#111827] text-center">{title}</h2>
 
           {/* Body */}
-          <p className="text-sm text-[#4b5563] text-center">
-            Are you sure you want to delete{" "}
-            <span className="font-bold text-[#111827]">{targetName}</span>?
-            {" "}This action cannot be undone.
-          </p>
+          <div className="text-sm text-[#4b5563] text-center">
+            <p>
+              Are you sure you want to delete{" "}
+              <span className="font-bold text-[#111827]">{targetName}</span>?
+            </p>
+            <p>This action cannot be undone.</p>
+          </div>
         </div>
 
         {/* Divider */}

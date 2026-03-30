@@ -12,11 +12,11 @@ export function DashboardSidebar() {
 
   return (
     <aside className="w-60 bg-white border-r border-gray-200 shrink-0 overflow-y-auto">
-      <div className="px-4 py-4">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-          {activeTabId.replace("-", " ")}
+      <div className="pt-5 pb-4">
+        <p className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider mb-3 px-5">
+          {activeTabId === "central-monitor" ? "Central Monitor" : activeTabId.replace(/-/g, " ")}&nbsp;settings
         </p>
-        <nav className="flex flex-col gap-0.5">
+        <nav className="flex flex-col">
           {menuItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
             return (
@@ -24,10 +24,10 @@ export function DashboardSidebar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                  "flex items-center h-11 text-sm transition-colors",
                   isActive
-                    ? "bg-blue-50 text-[#2563EB] border-l-[3px] border-[#2563EB]"
-                    : "text-muted-foreground hover:bg-gray-100 hover:text-foreground"
+                    ? "bg-[#eff6ff] text-[#2563EB] font-semibold border-l-[3px] border-[#2563EB] pl-[17px]"
+                    : "text-[#4b5563] font-normal hover:bg-gray-50 pl-5"
                 )}
               >
                 {item.label}

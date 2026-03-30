@@ -134,14 +134,14 @@ export function EditMemberModal({ open, onOpenChange, member, onSave }: EditMemb
           <Button
             variant="outline"
             onClick={handleCancel}
-            className="h-10 px-6 border-[#d1d5db] text-[#4b5563] text-[14px] font-medium rounded-lg"
+            className="h-10 w-[100px] border-[#d1d5db] text-[#4b5563] text-[14px] font-medium rounded-lg"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={!name || !email}
-            className="h-10 px-6 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[14px] font-semibold rounded-lg"
+            className="h-10 w-[140px] bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[14px] font-semibold rounded-lg"
           >
             Save Changes
           </Button>

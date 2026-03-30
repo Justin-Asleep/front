@@ -26,7 +26,7 @@ export default function HospitalInfoPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Hospital Information</h1>
-        <p className="text-muted-foreground">Manage hospital settings</p>
+        <p className="text-muted-foreground">Manage hospital basic information and settings</p>
       </div>
       <Card className="max-w-[800px]">
         <CardHeader className="border-b">
@@ -34,17 +34,17 @@ export default function HospitalInfoPage() {
         </CardHeader>
         <CardContent className="space-y-4 pt-6">
           {fields.map(({ label, key }) => (
-            <div key={key} className="flex items-center gap-4">
+            <div key={key} className="flex items-center">
               <label className="w-[168px] shrink-0 text-sm font-medium text-[#4b5563]">
                 {label}
               </label>
               <Input
                 defaultValue={mockHospitalData[key]}
-                className="max-w-[560px]"
+                className="w-[560px]"
               />
             </div>
           ))}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center">
             <label className="w-[168px] shrink-0 text-sm font-medium text-[#4b5563]">
               Status
             </label>
@@ -54,7 +54,7 @@ export default function HospitalInfoPage() {
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button variant="outline">Cancel</Button>
-            <Button>Save Changes</Button>
+            <Button className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white">Save Changes</Button>
           </div>
         </CardContent>
       </Card>

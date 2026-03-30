@@ -56,7 +56,7 @@ function OccupancyBar({ value }: { value: number }) {
           style={{ width: `${value}%`, backgroundColor: color }}
         />
       </div>
-      <span className="text-sm text-[#374151]">{value}%</span>
+      <span className="text-[12px] font-medium text-[#4b5563]">{value}%</span>
     </div>
   )
 }
@@ -108,18 +108,18 @@ export default function WardsPage() {
         </Button>
       </div>
 
-      <Card className="border border-[#e5e7eb] rounded-xl shadow-sm">
+      <Card className="rounded-xl shadow-[0px_1px_3px_0px_rgba(0,0,0,0.06)]">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow className="bg-[#f9fafb] hover:bg-[#f9fafb] border-b border-[#e5e7eb]">
-                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Ward Name</TableHead>
-                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Floor</TableHead>
-                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Rooms</TableHead>
-                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Beds</TableHead>
-                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Occupancy</TableHead>
-                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Status</TableHead>
-                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Actions</TableHead>
+                <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">Ward Name</TableHead>
+                <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">Floor</TableHead>
+                <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">Rooms</TableHead>
+                <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">Beds</TableHead>
+                <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">Occupancy</TableHead>
+                <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">Status</TableHead>
+                <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -131,24 +131,23 @@ export default function WardsPage() {
                     idx % 2 === 1 ? "bg-[#f9fafb]" : "bg-white"
                   )}
                 >
-                  <TableCell className="px-4 py-3 font-medium text-[#111827]">{ward.name}</TableCell>
-                  <TableCell className="px-4 py-3 text-[#4b5563]">{ward.floor}</TableCell>
-                  <TableCell className="px-4 py-3 text-[#4b5563]">{ward.rooms}</TableCell>
-                  <TableCell className="px-4 py-3 text-[#4b5563]">{ward.beds}</TableCell>
-                  <TableCell className="px-4 py-3">
+                  <TableCell className="px-6 py-3 font-medium text-[#111827]">{ward.name}</TableCell>
+                  <TableCell className="px-6 py-3 text-[#4b5563]">{ward.floor}</TableCell>
+                  <TableCell className="px-6 py-3 text-[#4b5563]">{ward.rooms}</TableCell>
+                  <TableCell className="px-6 py-3 text-[#4b5563]">{ward.beds}</TableCell>
+                  <TableCell className="px-6 py-3">
                     <OccupancyBar value={ward.occupancy} />
                   </TableCell>
-                  <TableCell className="px-4 py-3">
+                  <TableCell className="px-6 py-3">
                     <Badge className={statusBadgeClass[ward.status]}>{ward.status}</Badge>
                   </TableCell>
-                  <TableCell className="px-4 py-3">
-                    <Button
-                      variant="ghost"
-                      className="h-8 px-3 text-sm text-[#2563eb] hover:text-[#1d4ed8]"
+                  <TableCell className="px-6 py-3">
+                    <button
+                      className="text-[#2563eb] font-medium text-[13px] hover:underline"
                       onClick={() => setEditTarget(ward)}
                     >
                       Edit
-                    </Button>
+                    </button>
                   </TableCell>
                 </TableRow>
               ))}

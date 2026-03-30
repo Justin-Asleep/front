@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Search, Pencil, Trash2 } from "lucide-react"
+
 import { cn } from "@/lib/utils"
 import { PaginationBar } from "@/components/ui/pagination-bar"
 import { AddMemberModal } from "@/components/admin/add-member-modal"
@@ -155,23 +155,20 @@ export default function AccountsPage() {
       <Card className="border border-[#e5e7eb] rounded-xl shadow-sm">
         <CardContent className="p-0">
           {/* Toolbar */}
-          <div className="flex items-center justify-between gap-4 px-4 py-3 border-b border-[#e5e7eb]">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2 size-4 text-[#9ca3af] pointer-events-none" />
-              <Input
-                placeholder="Search by name or email..."
-                className="pl-8 w-[300px] h-8 border-[#d1d5db]"
-                value={search}
-                onChange={(e) => handleSearchChange(e.target.value)}
-              />
-            </div>
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-[#e5e7eb]">
+            <Input
+              placeholder="Search by name or email..."
+              className="w-[300px] h-[38px] border-[#d1d5db]"
+              value={search}
+              onChange={(e) => handleSearchChange(e.target.value)}
+            />
             <div className="flex gap-2">
               {ROLE_FILTERS.map((role) => (
                 <button
                   key={role}
                   onClick={() => handleRoleChange(role)}
                   className={cn(
-                    "px-3 py-1 rounded-full text-sm font-medium transition-colors",
+                    "px-3 h-[32px] rounded-full text-[13px] font-medium transition-colors",
                     selectedRole === role
                       ? "bg-[#2563eb] text-white"
                       : "bg-white border border-[#d1d5db] text-[#4b5563] hover:bg-[#f9fafb]"
@@ -187,12 +184,12 @@ export default function AccountsPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-[#f9fafb] hover:bg-[#f9fafb] border-b border-[#e5e7eb]">
-                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Name</TableHead>
-                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Email</TableHead>
-                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Role</TableHead>
-                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Status</TableHead>
-                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Created</TableHead>
-                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Actions</TableHead>
+                <TableHead className="px-4 py-3 text-[12px] font-semibold text-[#9ca3af]">Name</TableHead>
+                <TableHead className="px-4 py-3 text-[12px] font-semibold text-[#9ca3af]">Email</TableHead>
+                <TableHead className="px-4 py-3 text-[12px] font-semibold text-[#9ca3af]">Role</TableHead>
+                <TableHead className="px-4 py-3 text-[12px] font-semibold text-[#9ca3af]">Status</TableHead>
+                <TableHead className="px-4 py-3 text-[12px] font-semibold text-[#9ca3af]">Created</TableHead>
+                <TableHead className="px-4 py-3 text-[12px] font-semibold text-[#9ca3af]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -221,32 +218,28 @@ export default function AccountsPage() {
                         <span className="font-medium text-[#111827]">{account.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-[#4b5563]">{account.email}</TableCell>
+                    <TableCell className="px-4 py-3 text-[13px] text-[#4b5563]">{account.email}</TableCell>
                     <TableCell className="px-4 py-3">
                       <Badge className={roleBadgeClass[account.role]}>{account.role}</Badge>
                     </TableCell>
                     <TableCell className="px-4 py-3">
                       <Badge className={statusBadgeClass[account.status]}>{account.status}</Badge>
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-[#4b5563]">{account.createdAt}</TableCell>
+                    <TableCell className="px-4 py-3 text-[13px] text-[#4b5563]">{account.createdAt}</TableCell>
                     <TableCell className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-8 text-[#2563eb] hover:text-[#1d4ed8]"
+                      <div className="flex items-center gap-3">
+                        <button
+                          className="text-[13px] font-medium text-[#2563eb] hover:text-[#1d4ed8]"
                           onClick={() => setEditTarget(account)}
                         >
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-8 text-[#dc2626] hover:text-[#b91c1c]"
+                          Edit
+                        </button>
+                        <button
+                          className="text-[13px] font-medium text-[#dc2626] hover:text-[#b91c1c]"
                           onClick={() => setDeleteTarget(account)}
                         >
-                          <Trash2 className="size-4" />
-                        </Button>
+                          Delete
+                        </button>
                       </div>
                     </TableCell>
                   </TableRow>

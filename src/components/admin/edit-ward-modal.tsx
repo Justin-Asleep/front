@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 
 interface WardData {
@@ -89,24 +90,12 @@ export function EditWardModal({ open, onOpenChange, ward, onSave }: EditWardModa
           <div className="space-y-2">
             <label className="text-[13px] font-medium text-[#111827]">Status</label>
             <div className="flex items-center gap-3">
-              {/* Toggle switch */}
-              <button
-                type="button"
-                role="switch"
-                aria-checked={active}
-                onClick={() => setActive(!active)}
-                className={cn(
-                  "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2",
-                  active ? "bg-[#16a34a]" : "bg-[#d1d5db]"
-                )}
-              >
-                <span
-                  className={cn(
-                    "pointer-events-none inline-block size-5 rounded-full bg-white shadow-lg ring-0 transition duration-200",
-                    active ? "translate-x-5" : "translate-x-0"
-                  )}
-                />
-              </button>
+              <Switch
+                checked={active}
+                onCheckedChange={(checked) => setActive(checked)}
+                aria-label="Status toggle"
+                className="data-checked:bg-[#16a34a]"
+              />
               <span
                 className={cn(
                   "inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-medium",
@@ -128,14 +117,14 @@ export function EditWardModal({ open, onOpenChange, ward, onSave }: EditWardModa
           <Button
             variant="outline"
             onClick={handleCancel}
-            className="h-10 px-6 border-[#d1d5db] text-[#4b5563] text-[14px] font-medium rounded-lg"
+            className="h-10 w-[100px] border-[#d1d5db] text-[#4b5563] text-[14px] font-medium rounded-lg"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={!name}
-            className="h-10 px-6 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[14px] font-semibold rounded-lg"
+            className="h-10 w-[140px] bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[14px] font-semibold rounded-lg"
           >
             Save Changes
           </Button>

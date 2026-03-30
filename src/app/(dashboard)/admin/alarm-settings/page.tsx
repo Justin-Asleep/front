@@ -2,7 +2,6 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import {
   Table,
   TableBody,
@@ -25,7 +24,7 @@ interface Parameter {
 
 const parameters: Parameter[] = [
   {
-    name: "Heart Rate",
+    name: "Heart Rate (HR)",
     unit: "bpm",
     dot: "#16a34a",
     values: { lowCritical: "50", lowWarning: "60", highWarning: "100", highCritical: "150" },
@@ -72,25 +71,20 @@ export default function AlarmSettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Alarm Settings</h1>
-        <p className="text-muted-foreground">Configure vital parameter alarm thresholds</p>
+        <h1 className="text-[22px] font-bold tracking-tight text-[#111827]">Alarm Settings</h1>
+        <p className="text-[14px] text-[#4b5563]">Configure vital parameter alarm thresholds</p>
       </div>
       <Card className="max-w-[1136px]">
         <CardHeader className="border-b">
           <CardTitle>Alarm Thresholds</CardTitle>
         </CardHeader>
-        <CardContent className="pt-4">
+        <CardContent className="pt-0 px-0 pb-0">
           <Table>
             <TableHeader>
-              <TableRow className="bg-[#f9fafb]">
-                <TableHead>Parameter</TableHead>
-                {thresholdColumns.map(({ key, label, type }) => (
-                  <TableHead
-                    key={key}
-                    className={cn(
-                      type === "critical" ? "text-[#ef4444]" : "text-[#f97316]"
-                    )}
-                  >
+              <TableRow className="bg-[#f9fafb] h-[52px]">
+                <TableHead className="text-[13px] font-semibold text-[#9ca3af]">Parameter</TableHead>
+                {thresholdColumns.map(({ key, label }) => (
+                  <TableHead key={key} className="text-[13px] font-semibold text-[#9ca3af]">
                     {label}
                   </TableHead>
                 ))}
@@ -98,31 +92,47 @@ export default function AlarmSettingsPage() {
             </TableHeader>
             <TableBody>
               {parameters.map((param, idx) => (
-                <TableRow key={param.name} className={idx % 2 === 0 ? "bg-white" : "bg-[#fcfcfe]"}>
+                <TableRow key={param.name} className={cn("h-[92px]", idx % 2 === 0 ? "bg-white" : "bg-[#fcfcfe]")}>
                   <TableCell>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-start gap-2">
                       <span
-                        className="w-2 h-2 rounded-full shrink-0"
+                        className="w-2.5 h-2.5 rounded-full shrink-0 mt-[3px]"
                         style={{ backgroundColor: param.dot }}
                       />
-                      <span className="font-medium">{param.name}</span>
-                      <span className="text-muted-foreground text-xs">({param.unit})</span>
+                      <div className="flex flex-col">
+                        <span className="text-[14px] font-semibold text-[#111827]">{param.name}</span>
+                        <span className="text-[12px] text-[#9ca3af]">{param.unit}</span>
+                      </div>
                     </div>
                   </TableCell>
                   {thresholdColumns.map(({ key, type }) => {
                     const isNA = param.naFields.includes(key)
                     return (
                       <TableCell key={key}>
-                        <Input
-                          disabled={isNA}
-                          defaultValue={isNA ? "N/A" : param.values[key]}
-                          className={cn(
-                            "w-20 text-center",
-                            isNA && "disabled:opacity-100 disabled:bg-[#f5f6f7] disabled:text-[#9ca3af]",
-                            !isNA && type === "critical" && "bg-[#fef2f2] text-[#ef4444] border-[#ef4444] focus-visible:ring-[#ef4444]/20",
-                            !isNA && type === "warning" && "bg-[#fff7ed] text-[#f97316] border-[#f97316] focus-visible:ring-[#f97316]/20",
-                          )}
-                        />
+                        {isNA ? (
+                          <div className="h-[44px] w-[180px] border border-[#d1d5db] rounded-[6px] bg-[#f5f6f7] flex items-center justify-center">
+                            <span className="text-[13px] text-[#9ca3af]">N/A</span>
+                          </div>
+                        ) : (
+                          <div className="h-[44px] w-[180px] border border-[#d1d5db] rounded-[6px] bg-white flex items-center">
+                            <div
+                              className={cn(
+                                "ml-[11px] h-[28px] w-[56px] rounded-[4px] flex items-center justify-center shrink-0",
+                                type === "critical" ? "bg-[#fef2f2]" : "bg-[#fff7ed]"
+                              )}
+                            >
+                              <span
+                                className={cn(
+                                  "text-[13px] font-bold",
+                                  type === "critical" ? "text-[#ef4444]" : "text-[#f97316]"
+                                )}
+                              >
+                                {param.values[key]}
+                              </span>
+                            </div>
+                            <span className="text-[12px] text-[#9ca3af] ml-[10px]">{param.unit}</span>
+                          </div>
+                        )}
                       </TableCell>
                     )
                   })}
@@ -131,18 +141,19 @@ export default function AlarmSettingsPage() {
             </TableBody>
           </Table>
 
-          <div className="mt-4 rounded-md bg-[#eff6ff] p-3">
-            <p className="text-sm text-[#2563eb]">
-              Changes apply to all monitors. Existing alarms will be re-evaluated.
-            </p>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 mt-4 border-t">
+          <div className="flex justify-end gap-3 px-6 h-[64px] items-center border-t border-[#e5e7eb]">
             <Button variant="outline">Cancel</Button>
             <Button>Save Changes</Button>
           </div>
         </CardContent>
       </Card>
+
+      <div className="max-w-[1136px] rounded-[6px] bg-[#eff6ff] px-4 h-[48px] flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full bg-[#3b82f6] shrink-0" />
+        <p className="text-[13px] text-[#2563eb]">
+          Changes apply to all monitors. Existing alarms will be re-evaluated.
+        </p>
+      </div>
     </div>
   )
 }

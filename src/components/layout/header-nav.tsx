@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { tabs, getActiveTabId } from "@/lib/navigation";
 
@@ -12,11 +11,11 @@ export function HeaderNav() {
 
   return (
     <header className="h-16 bg-[#2563EB] flex items-center px-6 shrink-0">
-      <div className="text-white font-bold text-lg mr-8 shrink-0">
+      <div className="text-white font-bold text-base mr-8 shrink-0">
         Vital Monitoring
       </div>
 
-      <nav className="flex items-center gap-1 flex-1">
+      <nav className="flex items-center flex-1">
         {tabs.map((tab) => {
           const isActive = activeTabId === tab.id;
           return (
@@ -24,25 +23,26 @@ export function HeaderNav() {
               key={tab.id}
               href={tab.href}
               className={cn(
-                "px-4 py-2 rounded-md text-sm font-medium transition-colors",
+                "relative px-4 h-16 flex items-center text-sm transition-colors",
                 isActive
-                  ? "bg-white/20 text-white"
-                  : "text-blue-100 hover:bg-white/10 hover:text-white"
+                  ? "font-semibold text-white"
+                  : "font-normal text-white/70 hover:text-white"
               )}
             >
               {tab.label}
+              {isActive && (
+                <span className="absolute bottom-0 left-0 right-0 h-[3px] bg-white" />
+              )}
             </Link>
           );
         })}
       </nav>
 
       <div className="flex items-center gap-3 shrink-0">
-        <button className="text-blue-100 hover:text-white transition-colors p-1.5 rounded-md hover:bg-white/10">
-          <Bell size={20} />
-        </button>
-        <button className="text-blue-100 hover:text-white transition-colors p-1.5 rounded-md hover:bg-white/10">
-          <User size={20} />
-        </button>
+        <span className="text-sm text-blue-100">Admin</span>
+        <div className="size-8 rounded-full bg-white/20 flex items-center justify-center text-white text-sm font-medium">
+          A
+        </div>
       </div>
     </header>
   );

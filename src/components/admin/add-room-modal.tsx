@@ -108,18 +108,18 @@ export function AddRoomModal({ open, onOpenChange, ward, onAdd }: AddRoomModalPr
                 <SelectItem value="HEX">HEX (6 beds)</SelectItem>
               </SelectContent>
             </Select>
+          </div>
 
-            {/* Info box */}
-            <div className="flex items-start gap-2 bg-[#eff6ff] rounded-lg px-3 py-2.5 mt-2">
-              <div className="mt-0.5 size-2 rounded-full bg-[#2563eb] shrink-0" />
-              <div>
-                <p className="text-[12px] font-medium text-[#2563eb]">
-                  SINGLE = 1 bed&nbsp;&nbsp;|&nbsp;&nbsp;QUAD = 4 beds&nbsp;&nbsp;|&nbsp;&nbsp;HEX = 6 beds
-                </p>
-                <p className="text-[11px] text-[#4b82f6]">
-                  Beds are auto-generated based on room type.
-                </p>
-              </div>
+          {/* Info box */}
+          <div className="flex items-start gap-2 bg-[#eff6ff] rounded-lg px-3 py-2.5">
+            <div className="mt-0.5 size-2 rounded-full bg-[#2563eb] shrink-0" />
+            <div>
+              <p className="text-[12px] font-medium text-[#2563eb]">
+                SINGLE = 1 bed&nbsp;&nbsp;|&nbsp;&nbsp;QUAD = 4 beds&nbsp;&nbsp;|&nbsp;&nbsp;HEX = 6 beds
+              </p>
+              <p className="text-[11px] text-[#4b82f6]">
+                Beds are auto-generated based on room type.
+              </p>
             </div>
           </div>
         </div>
@@ -131,14 +131,14 @@ export function AddRoomModal({ open, onOpenChange, ward, onAdd }: AddRoomModalPr
           <Button
             variant="outline"
             onClick={handleCancel}
-            className="h-10 px-6 border-[#d1d5db] text-[#4b5563] text-[14px] font-medium rounded-lg"
+            className="h-10 w-[100px] border-[#d1d5db] text-[#4b5563] text-[14px] font-medium rounded-lg"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={!name || !roomType}
-            className="h-10 px-6 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[14px] font-semibold rounded-lg"
+            className="h-10 w-[140px] bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[14px] font-semibold rounded-lg"
           >
             Add Room
           </Button>
