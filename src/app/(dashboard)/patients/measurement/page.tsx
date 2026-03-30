@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   Table,
@@ -35,7 +35,7 @@ const VITALS = [
     label: "SpO2",
     value: "97",
     unit: "%",
-    color: "#38bdf8",
+    color: "#38bef8",
     bgColor: "#eaf7fe",
     data: [97, 98, 97, 96, 98, 99, 97, 98, 96, 97],
   },
@@ -50,10 +50,10 @@ const VITALS = [
   },
   {
     key: "Temp",
-    label: "Temperature",
+    label: "Temp",
     value: "36.8",
-    unit: "°C",
-    color: "#a78bfa",
+    unit: "C",
+    color: "#a78bfb",
     bgColor: "#f6f4ff",
     data: [36.5, 36.6, 36.7, 36.8, 36.9, 37.0, 36.8, 36.7, 36.6, 36.8],
   },
@@ -119,15 +119,21 @@ export default function MeasurementPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
+      {/* Back link + Page header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Measurement History</h1>
-        <p className="text-muted-foreground">Vital sign trends and historical data</p>
+        <Link
+          href="/patients/list"
+          className="inline-flex items-center gap-1 text-[13px] font-medium text-[#2563eb] hover:text-[#1d4ed8] mb-2"
+        >
+          ← Back to Patient List
+        </Link>
+        <h1 className="text-[22px] font-bold text-[#111827]">Measurement History</h1>
+        <p className="text-[14px] text-[#4b5563]">Vital sign trends and historical data</p>
       </div>
 
       {/* Patient info card */}
-      <Card className="border border-[#e5e7eb] rounded-xl shadow-sm">
-        <CardContent className="flex items-center justify-between px-4 py-0 h-[80px]">
+      <Card className="rounded-[12px] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.06)]">
+        <CardContent className="flex items-center px-4 py-0 h-[80px]">
           <div className="flex items-center gap-3">
             <Avatar className="size-12">
               <AvatarFallback className="bg-[#eff6ff] text-[#2563eb] font-bold text-sm">
@@ -141,28 +147,22 @@ export default function MeasurementPage() {
               </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            className="bg-[#f9fafb] border border-[#e5e7eb] text-[#4b5563] rounded-[8px] h-9 px-4 text-sm hover:bg-[#f3f4f6]"
-          >
-            Change Patient
-          </Button>
         </CardContent>
       </Card>
 
       {/* Time range toggle */}
-      <Card className="border border-[#e5e7eb] rounded-[8px] shadow-sm w-fit">
-        <CardContent className="flex items-center gap-3 px-4 h-[44px] py-0">
-          <span className="text-sm font-medium text-[#374151]">Range:</span>
+      <div className="rounded-[8px] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.06)] bg-white w-fit">
+        <div className="flex items-center gap-3 px-3 h-[36px]">
+          <span className="text-[12px] font-medium text-[#9ca3af]">Range:</span>
           <div className="flex gap-1">
             {TIME_RANGES.map((range) => (
               <button
                 key={range}
                 onClick={() => setActiveRange(range)}
                 className={cn(
-                  "w-[52px] h-[28px] rounded-[6px] text-sm font-medium transition-colors",
+                  "w-[52px] h-[28px] rounded-[6px] text-[12px] font-medium transition-colors",
                   activeRange === range
-                    ? "bg-[#2563eb] text-white"
+                    ? "bg-[#2563eb] text-white font-semibold"
                     : "bg-[#f9fafb] text-[#4b5563] hover:bg-[#f3f4f6]"
                 )}
               >
@@ -170,39 +170,39 @@ export default function MeasurementPage() {
               </button>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Vital trend sparkline cards */}
       <div className="grid grid-cols-5 gap-4">
         {VITALS.map((v) => (
           <div
             key={v.key}
-            className="flex flex-col rounded-[10px] bg-white border border-[#e5e7eb] overflow-hidden shadow-sm h-[156px]"
+            className="flex flex-col rounded-[12px] bg-white overflow-hidden shadow-[0px_1px_3px_0px_rgba(0,0,0,0.06)] h-[156px]"
           >
             {/* Top color bar */}
             <div style={{ height: 4, backgroundColor: v.color, flexShrink: 0 }} />
 
-            <div className="flex flex-col gap-1.5 px-3 pt-2 pb-3">
+            <div className="flex flex-col gap-1 px-3.5 pt-2.5 pb-3">
               {/* Parameter label */}
-              <span className="text-[11px] text-[#9ca3af] font-semibold uppercase tracking-wide">
+              <span className="text-[11px] text-[#9ca3af] font-semibold">
                 {v.label}
               </span>
 
-              {/* Value + unit */}
-              <div className="flex items-baseline gap-1">
-                <span
-                  className="text-[24px] font-bold leading-none"
-                  style={{ color: v.color }}
-                >
-                  {v.value}
-                </span>
-                <span className="text-[11px] text-[#9ca3af]">{v.unit}</span>
-              </div>
+              {/* Value */}
+              <span
+                className="text-[24px] font-bold leading-none"
+                style={{ color: v.color }}
+              >
+                {v.value}
+              </span>
+
+              {/* Unit */}
+              <span className="text-[11px] text-[#9ca3af]">{v.unit}</span>
 
               {/* Sparkline */}
               <div
-                className="rounded-[6px] overflow-hidden w-full"
+                className="rounded-[6px] overflow-hidden w-full mt-1"
                 style={{ height: H, backgroundColor: v.bgColor }}
               >
                 <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
@@ -229,35 +229,23 @@ export default function MeasurementPage() {
       {/* Recent Measurements table */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-[#111827]">Recent Measurements</h2>
-          <Button variant="outline" className="h-8 px-3 text-sm border-[#e5e7eb] text-[#4b5563]">
+          <h2 className="text-[15px] font-semibold text-[#111827]">Recent Measurements</h2>
+          <button className="h-[32px] w-[100px] border border-[#d1d5db] rounded-[6px] text-[12px] font-medium text-[#4b5563] bg-white hover:bg-[#f9fafb]">
             Export CSV
-          </Button>
+          </button>
         </div>
 
-        <Card className="border border-[#e5e7eb] rounded-xl shadow-sm">
+        <Card className="rounded-[12px] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.06)]">
           <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow className="bg-[#f9fafb] hover:bg-[#f9fafb] border-b border-[#e5e7eb]">
-                  <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">
-                    Time
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "#22c55e" }}>
-                    HR
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "#38bdf8" }}>
-                    SpO2
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "#fbbf24" }}>
-                    RR
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "#a78bfa" }}>
-                    Temp
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "#f87171" }}>
-                    BP
-                  </TableHead>
+                  <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">Time</TableHead>
+                  <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">HR</TableHead>
+                  <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">SpO2</TableHead>
+                  <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">RR</TableHead>
+                  <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">Temp</TableHead>
+                  <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">BP</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -266,27 +254,15 @@ export default function MeasurementPage() {
                     key={row.time}
                     className={cn(
                       "border-b border-[#e5e7eb]",
-                      idx % 2 === 1 ? "bg-[#f9fafb]" : "bg-white"
+                      idx % 2 === 1 ? "bg-[#fbfbfc]" : "bg-white"
                     )}
                   >
-                    <TableCell className="px-4 py-3 text-sm font-medium text-[#374151]">
-                      {row.time}
-                    </TableCell>
-                    <TableCell className="px-4 py-3 text-sm font-semibold" style={{ color: "#22c55e" }}>
-                      {row.hr}
-                    </TableCell>
-                    <TableCell className="px-4 py-3 text-sm font-semibold" style={{ color: "#38bdf8" }}>
-                      {row.spo2}%
-                    </TableCell>
-                    <TableCell className="px-4 py-3 text-sm font-semibold" style={{ color: "#fbbf24" }}>
-                      {row.rr}
-                    </TableCell>
-                    <TableCell className="px-4 py-3 text-sm font-semibold" style={{ color: "#a78bfa" }}>
-                      {row.temp}°C
-                    </TableCell>
-                    <TableCell className="px-4 py-3 text-sm font-semibold" style={{ color: "#f87171" }}>
-                      {row.bp}
-                    </TableCell>
+                    <TableCell className="px-6 py-3 text-[13px] text-[#4b5563]">{row.time}</TableCell>
+                    <TableCell className="px-6 py-3 text-[13px] font-semibold" style={{ color: "#22c55e" }}>{row.hr}</TableCell>
+                    <TableCell className="px-6 py-3 text-[13px] font-semibold" style={{ color: "#38bef8" }}>{row.spo2}</TableCell>
+                    <TableCell className="px-6 py-3 text-[13px] font-semibold" style={{ color: "#fbbf24" }}>{row.rr}</TableCell>
+                    <TableCell className="px-6 py-3 text-[13px] font-semibold" style={{ color: "#a78bfb" }}>{row.temp}</TableCell>
+                    <TableCell className="px-6 py-3 text-[13px] font-semibold" style={{ color: "#f87171" }}>{row.bp}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

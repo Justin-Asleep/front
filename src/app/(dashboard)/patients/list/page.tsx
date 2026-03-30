@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,7 +19,6 @@ import { cn } from "@/lib/utils"
 import { PaginationBar } from "@/components/ui/pagination-bar"
 import { AddPatientModal } from "@/components/patients/add-patient-modal"
 import { EditPatientModal } from "@/components/patients/edit-patient-modal"
-import { ViewDetailModal } from "@/components/patients/view-detail-modal"
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
 
 type PatientStatus = "Active" | "Admitted" | "Discharged"
@@ -172,6 +172,7 @@ const statusBadgeClass: Record<PatientStatus, string> = {
 }
 
 export default function PatientListPage() {
+  const router = useRouter()
   const [search, setSearch] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
 
@@ -179,7 +180,6 @@ export default function PatientListPage() {
   const [addOpen, setAddOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Patient | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Patient | null>(null)
-  const [viewTarget, setViewTarget] = useState<Patient | null>(null)
 
   const filtered = useMemo(() => {
     return mockPatients.filter((p) =>
@@ -260,7 +260,7 @@ export default function PatientListPage() {
                     <TableCell className="px-4 py-3">
                       <span
                         className="text-[#2563eb] font-medium cursor-pointer hover:underline"
-                        onClick={() => setViewTarget(patient)}
+                        onClick={() => router.push(`/patients/measurement?mrn=${patient.mrn}`)}
                       >
                         {patient.mrn}
                       </span>
@@ -319,25 +319,6 @@ export default function PatientListPage() {
         open={editTarget !== null}
         onOpenChange={(open) => { if (!open) setEditTarget(null) }}
         patient={editTarget}
-      />
-
-      <ViewDetailModal
-        open={viewTarget !== null}
-        onOpenChange={(open) => { if (!open) setViewTarget(null) }}
-        patient={viewTarget ? {
-          mrn: viewTarget.mrn,
-          name: viewTarget.name,
-          gender: viewTarget.gender,
-          admittedDate: "2026-03-20",
-          bed: "301-1",
-          ward: "Surgery Ward",
-          room: "Room 301",
-          attending: "Dr. Park Jihoon",
-          status: "Normal",
-          vitals: { hr: 72, spo2: 98, rr: 16, temp: 36.5, bp: "120/80" },
-          vitalsUpdated: "Updated 5 min ago",
-          alarmNote: "No active alarms",
-        } : null}
       />
 
       <ConfirmDeleteDialog

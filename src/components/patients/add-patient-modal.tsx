@@ -21,7 +21,6 @@ type PatientFormData = {
   name: string
   dob: string
   gender: string
-  hospital: string
   phone: string
   emergencyContact: string
   notes: string
@@ -33,7 +32,6 @@ type Props = {
   onSubmit?: (data: PatientFormData) => void
 }
 
-const HOSPITALS = ["Seoul General", "Yonsei Medical", "Asan Medical"]
 const GENDERS = ["Male", "Female", "Other"]
 
 export function AddPatientModal({ open, onOpenChange, onSubmit }: Props) {
@@ -42,7 +40,6 @@ export function AddPatientModal({ open, onOpenChange, onSubmit }: Props) {
     name: "",
     dob: "",
     gender: "",
-    hospital: "",
     phone: "",
     emergencyContact: "",
     notes: "",
@@ -127,21 +124,6 @@ export function AddPatientModal({ open, onOpenChange, onSubmit }: Props) {
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          {/* Row 3: Hospital (full width) */}
-          <div className="space-y-1.5">
-            <label className="text-[13px] font-medium text-[#111827]">Hospital *</label>
-            <Select value={form.hospital} onValueChange={(v) => handleChange("hospital", v ?? "")}>
-              <SelectTrigger className="h-10 border-[#d1d5db] text-[14px] w-full">
-                <SelectValue placeholder="Select hospital..." />
-              </SelectTrigger>
-              <SelectContent>
-                {HOSPITALS.map((h) => (
-                  <SelectItem key={h} value={h}>{h}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Section: Contact Information */}

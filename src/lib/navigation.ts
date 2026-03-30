@@ -21,11 +21,9 @@ export const sidebarMenus: Record<string, MenuItem[]> = {
   patients: [
     { label: "Patient List", href: "/patients/list" },
     { label: "Admission", href: "/patients/admission" },
-    { label: "Measurement", href: "/patients/measurement" },
   ],
   devices: [
     { label: "Tablet Mgmt", href: "/devices/tablets" },
-    { label: "Device Status", href: "/devices/status" },
     { label: "Device Log", href: "/devices/log" },
   ],
   monitoring: [
