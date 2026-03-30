@@ -13,6 +13,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
+import { AddStationModal } from "@/components/central-monitor/add-station-modal"
+import { EditStationModal } from "@/components/central-monitor/edit-station-modal"
 
 type StationStatus = "Active" | "Inactive"
 
@@ -25,12 +27,20 @@ type Station = {
   status: StationStatus
 }
 
-const mockStations: Station[] = [
-  { id: "1", name: "Internal Med Station", hospital: "Seoul General", ward: "Internal Medicine", urlKey: "c4d2e891f3a6b7c2e5d1b", status: "Active" },
-  { id: "2", name: "Surgery Station",      hospital: "Seoul General", ward: "Surgery",           urlKey: "a9f1b374d8c2e5f3a7b8e", status: "Active" },
-  { id: "3", name: "ICU Station",          hospital: "Yonsei Med",    ward: "ICU",               urlKey: "e7c3d628a1f4b9e6c2d5a", status: "Active" },
-  { id: "4", name: "ER Station",           hospital: "Asan Med",      ward: "Emergency",         urlKey: "b1a4f952e6c3d7b8f2a6c", status: "Inactive" },
+const initialStations: Station[] = [
+  { id: "1", name: "Internal Med Station", hospital: "Seoul General", ward: "internal-medicine", urlKey: "c4d2e891-1b7f-4a3c-8d9e-5f6a7b8c9d1b", status: "Active" },
+  { id: "2", name: "Surgery Station",      hospital: "Seoul General", ward: "surgery",           urlKey: "a9f1b374-8e2c-4d5a-6b7c-8d9e0f1a2b8e", status: "Active" },
+  { id: "3", name: "ICU Station",          hospital: "Yonsei Med",    ward: "icu",               urlKey: "e7c3d628-4a5d-4b6c-9e0f-1a2b3c4d5e4a", status: "Active" },
+  { id: "4", name: "ER Station",           hospital: "Asan Med",      ward: "emergency",         urlKey: "b1a4f952-e6c3-4d7b-8f2a-6c3d4e5f6a7b", status: "Inactive" },
 ]
+
+const WARD_LABELS: Record<string, string> = {
+  "internal-medicine": "Internal Medicine",
+  "surgery": "Surgery",
+  "icu": "ICU",
+  "emergency": "Emergency",
+  "pediatrics": "Pediatrics",
+}
 
 const statusBadgeClass: Record<StationStatus, string> = {
   Active:   "bg-[#dcfce7] text-[#16a34a] border-0",
@@ -38,12 +48,39 @@ const statusBadgeClass: Record<StationStatus, string> = {
 }
 
 export default function StationsPage() {
+  const [stations, setStations] = useState<Station[]>(initialStations)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [addOpen, setAddOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<Station | null>(null)
 
   function handleCopy(id: string, key: string) {
     navigator.clipboard.writeText(key)
     setCopiedId(id)
     setTimeout(() => setCopiedId(null), 2000)
+  }
+
+  function handleAdd(data: { name: string; ward: string }) {
+    const newStation: Station = {
+      id: String(Date.now()),
+      name: data.name,
+      hospital: "Seoul General",
+      ward: data.ward,
+      urlKey: crypto.randomUUID(),
+      status: "Active",
+    }
+    setStations((prev) => [...prev, newStation])
+  }
+
+  function handleEdit(data: { name: string; ward: string; status: StationStatus }) {
+    if (!editTarget) return
+    setStations((prev) =>
+      prev.map((s) =>
+        s.id === editTarget.id
+          ? { ...s, name: data.name, ward: data.ward, status: data.status }
+          : s
+      )
+    )
+    setEditTarget(null)
   }
 
   return (
@@ -53,7 +90,7 @@ export default function StationsPage() {
           <h1 className="text-2xl font-bold tracking-tight text-[#111827]">Station Registration</h1>
           <p className="text-sm text-[#4b5563]">Manage nurse station displays</p>
         </div>
-        <Button className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white">
+        <Button className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white" onClick={() => setAddOpen(true)}>
           + Add Station
         </Button>
       </div>
@@ -72,7 +109,7 @@ export default function StationsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockStations.map((station, idx) => (
+              {stations.map((station, idx) => (
                 <TableRow
                   key={station.id}
                   className={cn(
@@ -82,7 +119,7 @@ export default function StationsPage() {
                 >
                   <TableCell className="px-4 py-3 font-medium text-[#111827]">{station.name}</TableCell>
                   <TableCell className="px-4 py-3 text-[#4b5563]">{station.hospital}</TableCell>
-                  <TableCell className="px-4 py-3 text-[#4b5563]">{station.ward}</TableCell>
+                  <TableCell className="px-4 py-3 text-[#4b5563]">{WARD_LABELS[station.ward] ?? station.ward}</TableCell>
                   <TableCell className="px-4 py-3">
                     <div className="bg-[#f9fafb] rounded-[6px] flex items-center justify-between px-2.5 h-7 w-[220px]">
                       <span className="font-mono text-xs text-[#374151] truncate max-w-[140px]">{station.urlKey}</span>
@@ -98,7 +135,11 @@ export default function StationsPage() {
                     <Badge className={statusBadgeClass[station.status]}>{station.status}</Badge>
                   </TableCell>
                   <TableCell className="px-4 py-3">
-                    <Button variant="ghost" className="h-8 px-3 text-sm text-[#2563eb] hover:text-[#1d4ed8]">
+                    <Button
+                      variant="ghost"
+                      className="h-8 px-3 text-sm text-[#2563eb] hover:text-[#1d4ed8]"
+                      onClick={() => setEditTarget(station)}
+                    >
                       Edit
                     </Button>
                   </TableCell>
@@ -108,6 +149,21 @@ export default function StationsPage() {
           </Table>
         </CardContent>
       </Card>
+
+      <AddStationModal
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onSubmit={handleAdd}
+      />
+
+      {editTarget && (
+        <EditStationModal
+          open={!!editTarget}
+          onOpenChange={(open) => { if (!open) setEditTarget(null) }}
+          station={editTarget}
+          onSubmit={handleEdit}
+        />
+      )}
     </div>
   )
 }

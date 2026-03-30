@@ -17,6 +17,9 @@ import {
 import { Search, Pencil, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { PaginationBar } from "@/components/ui/pagination-bar"
+import { AddMemberModal } from "@/components/admin/add-member-modal"
+import { EditMemberModal } from "@/components/admin/edit-member-modal"
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
 
 type Role = "Admin" | "Nurse" | "Doctor"
 type Status = "Active" | "Inactive"
@@ -81,12 +84,17 @@ function getInitials(name: string) {
 }
 
 export default function AccountsPage() {
+  const [accounts, setAccounts] = useState<Account[]>(mockAccounts)
   const [search, setSearch] = useState("")
   const [selectedRole, setSelectedRole] = useState<string>("All")
   const [currentPage, setCurrentPage] = useState(1)
 
+  const [addOpen, setAddOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<Account | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Account | null>(null)
+
   const filtered = useMemo(() => {
-    return mockAccounts.filter((a) => {
+    return accounts.filter((a) => {
       const matchesSearch =
         search === "" ||
         a.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -94,7 +102,7 @@ export default function AccountsPage() {
       const matchesRole = selectedRole === "All" || a.role === selectedRole
       return matchesSearch && matchesRole
     })
-  }, [search, selectedRole])
+  }, [accounts, search, selectedRole])
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
   const start = (currentPage - 1) * PAGE_SIZE
@@ -110,6 +118,25 @@ export default function AccountsPage() {
     setCurrentPage(1)
   }
 
+  function handleAdd(data: { name: string; email: string; role: Role; status: Status }) {
+    const newAccount: Account = {
+      id: String(Date.now()),
+      ...data,
+      createdAt: new Date().toISOString().slice(0, 10),
+    }
+    setAccounts((prev) => [newAccount, ...prev])
+  }
+
+  function handleSave(data: Account) {
+    setAccounts((prev) => prev.map((a) => (a.id === data.id ? data : a)))
+  }
+
+  function handleDelete() {
+    if (!deleteTarget) return
+    setAccounts((prev) => prev.filter((a) => a.id !== deleteTarget.id))
+    setDeleteTarget(null)
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -117,7 +144,10 @@ export default function AccountsPage() {
           <h1 className="text-2xl font-bold tracking-tight text-[#111827]">Account Management</h1>
           <p className="text-sm text-[#4b5563]">Manage hospital staff accounts and permissions</p>
         </div>
-        <Button className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white">
+        <Button
+          className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white"
+          onClick={() => setAddOpen(true)}
+        >
           + Add Member
         </Button>
       </div>
@@ -201,10 +231,20 @@ export default function AccountsPage() {
                     <TableCell className="px-4 py-3 text-[#4b5563]">{account.createdAt}</TableCell>
                     <TableCell className="px-4 py-3">
                       <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="size-8 text-[#2563eb] hover:text-[#1d4ed8]">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-[#2563eb] hover:text-[#1d4ed8]"
+                          onClick={() => setEditTarget(account)}
+                        >
                           <Pencil className="size-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="size-8 text-[#dc2626] hover:text-[#b91c1c]">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-[#dc2626] hover:text-[#b91c1c]"
+                          onClick={() => setDeleteTarget(account)}
+                        >
                           <Trash2 className="size-4" />
                         </Button>
                       </div>
@@ -225,6 +265,27 @@ export default function AccountsPage() {
           />
         </CardContent>
       </Card>
+
+      <AddMemberModal
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onAdd={handleAdd}
+      />
+
+      <EditMemberModal
+        open={editTarget !== null}
+        onOpenChange={(open) => { if (!open) setEditTarget(null) }}
+        member={editTarget}
+        onSave={handleSave}
+      />
+
+      <ConfirmDeleteDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+        title="Delete Member"
+        targetName={deleteTarget?.name ?? ""}
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }

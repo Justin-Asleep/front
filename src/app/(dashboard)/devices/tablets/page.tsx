@@ -16,6 +16,9 @@ import {
 import { Search } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { PaginationBar } from "@/components/ui/pagination-bar"
+import { RegisterTabletModal } from "@/components/devices/register-tablet-modal"
+import { EditTabletModal } from "@/components/devices/edit-tablet-modal"
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
 
 type Status = "Active" | "Inactive"
 
@@ -28,7 +31,7 @@ type Tablet = {
   lastHeartbeat: string
 }
 
-const mockTablets: Tablet[] = [
+const initialTablets: Tablet[] = [
   { id: "1",  serial: "TAB-001-A", bed: "Bed 101",     wardRoom: "Ward A / Room 101", status: "Active",   lastHeartbeat: "2 min ago" },
   { id: "2",  serial: "TAB-002-B", bed: "Bed 102",     wardRoom: "Ward A / Room 102", status: "Active",   lastHeartbeat: "1 min ago" },
   { id: "3",  serial: "TAB-003-C", bed: "Bed 201",     wardRoom: "Ward B / Room 201", status: "Active",   lastHeartbeat: "Just now" },
@@ -52,12 +55,18 @@ const statusBadgeClass: Record<Status, string> = {
 }
 
 export default function TabletMgmtPage() {
+  const [tablets, setTablets] = useState<Tablet[]>(initialTablets)
   const [search, setSearch] = useState("")
   const [selectedStatus, setSelectedStatus] = useState<string>("All")
   const [currentPage, setCurrentPage] = useState(1)
 
+  const [registerOpen, setRegisterOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [selectedTablet, setSelectedTablet] = useState<Tablet | null>(null)
+
   const filtered = useMemo(() => {
-    return mockTablets.filter((t) => {
+    return tablets.filter((t) => {
       const matchesSearch =
         search === "" ||
         t.serial.toLowerCase().includes(search.toLowerCase()) ||
@@ -65,7 +74,7 @@ export default function TabletMgmtPage() {
       const matchesStatus = selectedStatus === "All" || t.status === selectedStatus
       return matchesSearch && matchesStatus
     })
-  }, [search, selectedStatus])
+  }, [tablets, search, selectedStatus])
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
   const start = (currentPage - 1) * PAGE_SIZE
@@ -81,6 +90,48 @@ export default function TabletMgmtPage() {
     setCurrentPage(1)
   }
 
+  function handleRegister(data: { serial: string; secret: string; bed: string }) {
+    const parts = data.bed.split(" / ")
+    const bed = parts[2] ?? data.bed
+    const wardRoom = parts.slice(0, 2).join(" / ")
+    const newTablet: Tablet = {
+      id: String(Date.now()),
+      serial: data.serial,
+      bed,
+      wardRoom,
+      status: "Active",
+      lastHeartbeat: "Just now",
+    }
+    setTablets((prev) => [newTablet, ...prev])
+  }
+
+  function handleEdit(data: { id: string; bed: string; status: Status; newSecret: string }) {
+    setTablets((prev) =>
+      prev.map((t) => {
+        if (t.id !== data.id) return t
+        const parts = data.bed.split(" / ")
+        const bed = parts[2] ?? data.bed
+        const wardRoom = parts.slice(0, 2).join(" / ")
+        return { ...t, bed, wardRoom, status: data.status }
+      })
+    )
+  }
+
+  function handleDelete(id: string) {
+    setTablets((prev) => prev.filter((t) => t.id !== id))
+    setCurrentPage(1)
+  }
+
+  function openEdit(tablet: Tablet) {
+    setSelectedTablet(tablet)
+    setEditOpen(true)
+  }
+
+  function openDelete(tablet: Tablet) {
+    setSelectedTablet(tablet)
+    setDeleteOpen(true)
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -88,7 +139,10 @@ export default function TabletMgmtPage() {
           <h1 className="text-2xl font-bold tracking-tight text-[#111827]">Tablet Management</h1>
           <p className="text-sm text-[#4b5563]">Register and manage tablet devices</p>
         </div>
-        <Button className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white">
+        <Button
+          onClick={() => setRegisterOpen(true)}
+          className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white"
+        >
           + Register Tablet
         </Button>
       </div>
@@ -171,10 +225,16 @@ export default function TabletMgmtPage() {
                     <TableCell className="px-4 py-3 text-[#4b5563] text-[13px]">{tablet.lastHeartbeat}</TableCell>
                     <TableCell className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <button className="px-3 py-1 rounded-md text-xs font-medium bg-[#eff6ff] text-[#2563eb] hover:bg-[#dbeafe]">
+                        <button
+                          onClick={() => openEdit(tablet)}
+                          className="px-3 py-1 rounded-md text-xs font-medium bg-[#eff6ff] text-[#2563eb] hover:bg-[#dbeafe]"
+                        >
                           Edit
                         </button>
-                        <button className="px-3 py-1 rounded-md text-xs font-medium bg-[#fef2f2] text-[#ef4444] hover:bg-[#fee2e2]">
+                        <button
+                          onClick={() => openDelete(tablet)}
+                          className="px-3 py-1 rounded-md text-xs font-medium bg-[#fef2f2] text-[#ef4444] hover:bg-[#fee2e2]"
+                        >
                           Delete
                         </button>
                       </div>
@@ -195,6 +255,27 @@ export default function TabletMgmtPage() {
           />
         </CardContent>
       </Card>
+
+      <RegisterTabletModal
+        open={registerOpen}
+        onOpenChange={setRegisterOpen}
+        onRegister={handleRegister}
+      />
+
+      <EditTabletModal
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        tablet={selectedTablet}
+        onSave={handleEdit}
+      />
+
+      <ConfirmDeleteDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete Tablet"
+        targetName={selectedTablet?.serial ?? ""}
+        onConfirm={() => selectedTablet && handleDelete(selectedTablet.id)}
+      />
     </div>
   )
 }

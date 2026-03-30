@@ -16,6 +16,10 @@ import {
 import { Search, Pencil, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { PaginationBar } from "@/components/ui/pagination-bar"
+import { AddPatientModal } from "@/components/patients/add-patient-modal"
+import { EditPatientModal } from "@/components/patients/edit-patient-modal"
+import { ViewDetailModal } from "@/components/patients/view-detail-modal"
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
 
 type PatientStatus = "Active" | "Admitted" | "Discharged"
 
@@ -159,7 +163,6 @@ const mockPatients: Patient[] = [
   { mrn: "P-001361", name: "Seo Hyewon",   dob: "1994-02-15", gender: "Female", hospital: "Asan Medical",   status: "Active" },
 ]
 
-const TOTAL_PATIENTS = 128
 const PAGE_SIZE = 8
 
 const statusBadgeClass: Record<PatientStatus, string> = {
@@ -171,6 +174,12 @@ const statusBadgeClass: Record<PatientStatus, string> = {
 export default function PatientListPage() {
   const [search, setSearch] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
+
+  // Modal state
+  const [addOpen, setAddOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<Patient | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Patient | null>(null)
+  const [viewTarget, setViewTarget] = useState<Patient | null>(null)
 
   const filtered = useMemo(() => {
     return mockPatients.filter((p) =>
@@ -189,8 +198,6 @@ export default function PatientListPage() {
     setCurrentPage(1)
   }
 
-  const displayTotal = search === "" ? TOTAL_PATIENTS : filtered.length
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -198,7 +205,10 @@ export default function PatientListPage() {
           <h1 className="text-2xl font-bold tracking-tight text-[#111827]">Patient List</h1>
           <p className="text-sm text-[#4b5563]">Manage patient records across all hospitals</p>
         </div>
-        <Button className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white">
+        <Button
+          className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white"
+          onClick={() => setAddOpen(true)}
+        >
           + Add Patient
         </Button>
       </div>
@@ -248,7 +258,10 @@ export default function PatientListPage() {
                     )}
                   >
                     <TableCell className="px-4 py-3">
-                      <span className="text-[#2563eb] font-medium cursor-pointer hover:underline">
+                      <span
+                        className="text-[#2563eb] font-medium cursor-pointer hover:underline"
+                        onClick={() => setViewTarget(patient)}
+                      >
                         {patient.mrn}
                       </span>
                     </TableCell>
@@ -261,10 +274,20 @@ export default function PatientListPage() {
                     </TableCell>
                     <TableCell className="px-4 py-3">
                       <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="size-8 text-[#2563eb] hover:text-[#1d4ed8]">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-[#2563eb] hover:text-[#1d4ed8]"
+                          onClick={() => setEditTarget(patient)}
+                        >
                           <Pencil className="size-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="size-8 text-[#dc2626] hover:text-[#b91c1c]">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-[#dc2626] hover:text-[#b91c1c]"
+                          onClick={() => setDeleteTarget(patient)}
+                        >
                           <Trash2 className="size-4" />
                         </Button>
                       </div>
@@ -285,6 +308,45 @@ export default function PatientListPage() {
           />
         </CardContent>
       </Card>
+
+      {/* Modals */}
+      <AddPatientModal
+        open={addOpen}
+        onOpenChange={setAddOpen}
+      />
+
+      <EditPatientModal
+        open={editTarget !== null}
+        onOpenChange={(open) => { if (!open) setEditTarget(null) }}
+        patient={editTarget}
+      />
+
+      <ViewDetailModal
+        open={viewTarget !== null}
+        onOpenChange={(open) => { if (!open) setViewTarget(null) }}
+        patient={viewTarget ? {
+          mrn: viewTarget.mrn,
+          name: viewTarget.name,
+          gender: viewTarget.gender,
+          admittedDate: "2026-03-20",
+          bed: "301-1",
+          ward: "Surgery Ward",
+          room: "Room 301",
+          attending: "Dr. Park Jihoon",
+          status: "Normal",
+          vitals: { hr: 72, spo2: 98, rr: 16, temp: 36.5, bp: "120/80" },
+          vitalsUpdated: "Updated 5 min ago",
+          alarmNote: "No active alarms",
+        } : null}
+      />
+
+      <ConfirmDeleteDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+        title="Delete Patient"
+        targetName={deleteTarget?.name ?? ""}
+        onConfirm={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

@@ -8,6 +8,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ViewDetailModal } from "@/components/patients/view-detail-modal";
+import { AssignPatientModal } from "@/components/patients/assign-patient-modal";
 
 type BedStatus = "occupied" | "alarm" | "empty";
 
@@ -36,8 +38,20 @@ const BEDS: BedData[] = [
   { id: "304-3", status: "empty" },
 ];
 
+const AVAILABLE_PATIENTS = [
+  { mrn: "P-001237", name: "Choi Yuna",    dob: "1995-08-19" },
+  { mrn: "P-001239", name: "Han Minji",    dob: "1988-07-14" },
+  { mrn: "P-001240", name: "Kang Seojun",  dob: "1973-12-05" },
+  { mrn: "P-001241", name: "Yoon Jiyeon",  dob: "2001-04-22" },
+  { mrn: "P-001242", name: "Shin Areum",   dob: "1992-06-15" },
+];
+
 export default function AdmissionPage() {
   const [ward, setWard] = useState<string | null>("ward3");
+
+  // Modal state
+  const [viewBed, setViewBed] = useState<BedData | null>(null);
+  const [assignBedId, setAssignBedId] = useState<string | null>(null);
 
   return (
     <div className="space-y-6">
@@ -107,7 +121,10 @@ export default function AdmissionPage() {
                   <p className="text-[14px] font-semibold text-[#111827] mt-0.5">{bed.patient}</p>
                   <p className="text-[11px] text-[#9ca3af] mt-0.5">Since: {bed.since}</p>
                 </div>
-                <button className="text-xs bg-[#eff6ff] text-[#2563eb] rounded-[5px] px-2 py-1 w-fit mt-2">
+                <button
+                  className="text-xs bg-[#eff6ff] text-[#2563eb] rounded-[5px] px-2 py-1 w-fit mt-2"
+                  onClick={() => setViewBed(bed)}
+                >
                   View Detail
                 </button>
               </div>
@@ -127,7 +144,10 @@ export default function AdmissionPage() {
                   <p className="text-[14px] font-semibold text-[#111827] mt-0.5">{bed.patient}</p>
                   <p className="text-[11px] text-[#9ca3af] mt-0.5">Since: {bed.since}</p>
                 </div>
-                <button className="text-xs bg-[#fef2f2] text-[#ef4444] border border-[#ef4444] rounded-[5px] px-2 py-1 w-fit mt-2">
+                <button
+                  className="text-xs bg-[#fef2f2] text-[#ef4444] border border-[#ef4444] rounded-[5px] px-2 py-1 w-fit mt-2"
+                  onClick={() => setViewBed(bed)}
+                >
                   View Detail
                 </button>
               </div>
@@ -144,7 +164,10 @@ export default function AdmissionPage() {
                 <p className="text-[13px] font-semibold text-[#9ca3af]">{bed.id}</p>
                 <p className="text-[14px] text-[#9ca3af] mt-0.5">Empty</p>
               </div>
-              <button className="text-xs bg-white border border-[#d1d5db] text-[#4b5563] rounded-[6px] px-2 py-1 w-fit mt-2">
+              <button
+                className="text-xs bg-white border border-[#d1d5db] text-[#4b5563] rounded-[6px] px-2 py-1 w-fit mt-2"
+                onClick={() => setAssignBedId(bed.id)}
+              >
                 Assign Patient
               </button>
             </div>
@@ -167,6 +190,34 @@ export default function AdmissionPage() {
           <span>Empty</span>
         </div>
       </div>
+
+      {/* Modals */}
+      <ViewDetailModal
+        open={viewBed !== null}
+        onOpenChange={(open) => { if (!open) setViewBed(null); }}
+        patient={viewBed ? {
+          mrn: "P-001234",
+          name: viewBed.patient ?? "",
+          gender: "Male",
+          admittedDate: viewBed.since ?? "2026-03-20",
+          bed: viewBed.id,
+          ward: "Surgery Ward",
+          room: "Room 301",
+          attending: "Dr. Park Jihoon",
+          status: viewBed.status === "alarm" ? "Warning" : "Normal",
+          vitals: { hr: 72, spo2: 98, rr: 16, temp: 36.5, bp: "120/80" },
+          vitalsUpdated: "Updated 5 min ago",
+          alarmNote: viewBed.status === "alarm" ? "Active alarm" : "No active alarms",
+        } : null}
+      />
+
+      <AssignPatientModal
+        open={assignBedId !== null}
+        onOpenChange={(open) => { if (!open) setAssignBedId(null); }}
+        bedId={assignBedId ?? ""}
+        wardName="Surgery"
+        availablePatients={AVAILABLE_PATIENTS}
+      />
     </div>
   );
 }

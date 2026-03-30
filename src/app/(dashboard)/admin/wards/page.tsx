@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -12,6 +13,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
+import { AddWardModal } from "@/components/admin/add-ward-modal"
+import { EditWardModal } from "@/components/admin/edit-ward-modal"
 
 type WardStatus = "Active" | "Inactive"
 
@@ -25,7 +28,7 @@ type Ward = {
   status: WardStatus
 }
 
-const mockWards: Ward[] = [
+const initialWards: Ward[] = [
   { id: "1", name: "Internal Medicine", floor: "3F", rooms: 8,  beds: 32, occupancy: 75, status: "Active" },
   { id: "2", name: "Surgery",           floor: "4F", rooms: 6,  beds: 24, occupancy: 83, status: "Active" },
   { id: "3", name: "Pediatrics",        floor: "2F", rooms: 5,  beds: 20, occupancy: 60, status: "Active" },
@@ -59,6 +62,37 @@ function OccupancyBar({ value }: { value: number }) {
 }
 
 export default function WardsPage() {
+  const [wards, setWards] = useState<Ward[]>(initialWards)
+  const [addOpen, setAddOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<Ward | null>(null)
+
+  function handleAdd(data: { name: string; floor: string }) {
+    const newWard: Ward = {
+      id: String(Date.now()),
+      name: data.name,
+      floor: data.floor ? `${data.floor}F` : "—",
+      rooms: 0,
+      beds: 0,
+      occupancy: 0,
+      status: "Active",
+    }
+    setWards((prev) => [...prev, newWard])
+  }
+
+  function handleSave(data: { id: string; name: string; floor: string; status: WardStatus }) {
+    setWards((prev) =>
+      prev.map((w) =>
+        w.id === data.id
+          ? { ...w, name: data.name, floor: data.floor ? `${data.floor}F` : w.floor, status: data.status }
+          : w
+      )
+    )
+  }
+
+  const editTargetForModal = editTarget
+    ? { ...editTarget, floor: editTarget.floor.replace("F", "") }
+    : null
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -66,7 +100,10 @@ export default function WardsPage() {
           <h1 className="text-2xl font-bold tracking-tight text-[#111827]">Ward Management</h1>
           <p className="text-sm text-[#4b5563]">Manage hospital wards and floors</p>
         </div>
-        <Button className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white">
+        <Button
+          className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white"
+          onClick={() => setAddOpen(true)}
+        >
           + Add Ward
         </Button>
       </div>
@@ -86,7 +123,7 @@ export default function WardsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockWards.map((ward, idx) => (
+              {wards.map((ward, idx) => (
                 <TableRow
                   key={ward.id}
                   className={cn(
@@ -105,7 +142,11 @@ export default function WardsPage() {
                     <Badge className={statusBadgeClass[ward.status]}>{ward.status}</Badge>
                   </TableCell>
                   <TableCell className="px-4 py-3">
-                    <Button variant="ghost" className="h-8 px-3 text-sm text-[#2563eb] hover:text-[#1d4ed8]">
+                    <Button
+                      variant="ghost"
+                      className="h-8 px-3 text-sm text-[#2563eb] hover:text-[#1d4ed8]"
+                      onClick={() => setEditTarget(ward)}
+                    >
                       Edit
                     </Button>
                   </TableCell>
@@ -115,6 +156,19 @@ export default function WardsPage() {
           </Table>
         </CardContent>
       </Card>
+
+      <AddWardModal
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onAdd={handleAdd}
+      />
+
+      <EditWardModal
+        open={editTarget !== null}
+        onOpenChange={(open) => { if (!open) setEditTarget(null) }}
+        ward={editTargetForModal}
+        onSave={handleSave}
+      />
     </div>
   )
 }

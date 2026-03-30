@@ -1,5 +1,9 @@
+"use client"
+
+import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Table,
   TableBody,
@@ -8,7 +12,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { History } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { AlarmHistoryModal } from "@/components/monitoring/alarm-history-modal"
 
 type Severity = "CRITICAL" | "WARNING"
 type AlarmStatus = "Active" | "Acknowledged" | "Resolved"
@@ -55,11 +61,23 @@ const statusBadgeClass: Record<AlarmStatus, string> = {
 }
 
 export default function AlarmStatusPage() {
+  const [historyOpen, setHistoryOpen] = useState(false)
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-[22px] font-bold tracking-tight text-[#111827]">Alarm Status</h1>
-        <p className="text-sm text-[#4b5563]">Active alarms and alarm history</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-[22px] font-bold tracking-tight text-[#111827]">Alarm Status</h1>
+          <p className="text-sm text-[#4b5563]">Active alarms and alarm history</p>
+        </div>
+        <Button
+          variant="outline"
+          className="gap-2"
+          onClick={() => setHistoryOpen(true)}
+        >
+          <History className="size-4" />
+          Alarm History
+        </Button>
       </div>
 
       {/* Stat Cards */}
@@ -132,6 +150,12 @@ export default function AlarmStatusPage() {
           </Table>
         </CardContent>
       </Card>
+
+      <AlarmHistoryModal
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        stationName="Internal Medicine Station"
+      />
     </div>
   )
 }
