@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
-import { Badge } from "@/components/ui/badge"
 import { GripVerticalIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -149,10 +148,7 @@ export function EditMonitorModal({ open, onOpenChange, monitor, onSubmit }: Prop
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className={cn(
-          "w-full p-0 rounded-2xl overflow-hidden transition-[max-width] duration-300",
-          activeTab === "bed-mapping" ? "sm:max-w-[800px]" : "sm:max-w-[520px]"
-        )}
+        className="sm:max-w-[800px] w-full p-0 rounded-2xl overflow-hidden"
         showCloseButton={false}
       >
         {/* Header */}
@@ -178,16 +174,16 @@ export function EditMonitorModal({ open, onOpenChange, monitor, onSubmit }: Prop
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as string)} className="px-8 pt-2 pb-0">
-          <TabsList variant="line" className="w-full justify-start gap-0 h-auto pb-0 bg-transparent border-b border-[#e8ebed]">
+          <TabsList variant="line" className="w-full justify-start gap-0 h-9 pb-0 bg-transparent border-b border-[#e8ebed]">
             <TabsTrigger
               value="info"
-              className="px-2 py-2.5 text-[14px] rounded-none border-b-2 border-transparent data-active:border-[#2563eb] data-active:text-[#2563eb] text-[#6b737d]"
+              className="flex-initial justify-start px-2 py-2.5 text-[14px] font-normal rounded-none bg-transparent data-active:bg-transparent border-0 border-b-2 border-b-transparent data-active:border-b-[#2563eb] data-active:text-[#2563eb] data-active:font-medium text-[#6b737d] after:hidden"
             >
               Info
             </TabsTrigger>
             <TabsTrigger
               value="bed-mapping"
-              className="px-2 py-2.5 text-[14px] rounded-none border-b-2 border-transparent data-active:border-[#2563eb] data-active:text-[#2563eb] text-[#6b737d]"
+              className="flex-initial justify-start px-2 py-2.5 text-[14px] font-normal rounded-none bg-transparent data-active:bg-transparent border-0 border-b-2 border-b-transparent data-active:border-b-[#2563eb] data-active:text-[#2563eb] data-active:font-medium text-[#6b737d] after:hidden"
             >
               Bed Mapping
             </TabsTrigger>
@@ -251,16 +247,25 @@ export function EditMonitorModal({ open, onOpenChange, monitor, onSubmit }: Prop
             </div>
 
             {/* Status */}
-            <div className="flex flex-col gap-1.5">
+            <div className="space-y-2">
               <label className="text-[13px] font-medium text-[#111827]">Status</label>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <Switch
                   checked={active}
                   onCheckedChange={setActive}
+                  aria-label="Status toggle"
+                  className="data-checked:bg-[#16a34a]"
                 />
-                <Badge className={active ? "bg-[#dcfce7] text-[#16a34a] border-0" : "bg-[#f3f4f6] text-[#9ca3af] border-0"}>
+                <span
+                  className={cn(
+                    "inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-medium",
+                    active
+                      ? "bg-[#dcfce7] text-[#16a34a]"
+                      : "bg-[#f3f4f6] text-[#9ca3af]"
+                  )}
+                >
                   {active ? "Active" : "Inactive"}
-                </Badge>
+                </span>
               </div>
             </div>
 

@@ -6,7 +6,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -123,13 +122,18 @@ export function EditTabletModal({ open, onOpenChange, tablet, onSave }: Props) {
           </div>
 
           {/* Status toggle */}
-          <div className="flex flex-col gap-1.5">
+          <div className="space-y-2">
             <label className="text-[13px] font-medium text-[#111827]">Status</label>
             <div className="flex items-center gap-3">
-              <Switch checked={active} onCheckedChange={setActive} />
+              <Switch
+                checked={active}
+                onCheckedChange={setActive}
+                aria-label="Status toggle"
+                className="data-checked:bg-[#16a34a]"
+              />
               <span
                 className={cn(
-                  "text-[12px] font-medium px-2 py-0.5 rounded-full",
+                  "inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-medium",
                   active
                     ? "bg-[#dcfce7] text-[#16a34a]"
                     : "bg-[#f3f4f6] text-[#9ca3af]"
@@ -158,23 +162,25 @@ export function EditTabletModal({ open, onOpenChange, tablet, onSave }: Props) {
           </div>
         </div>
 
+        <div className="h-px bg-[#e5e7eb] mx-8" />
+
         {/* Footer */}
-        <DialogFooter className="px-8 py-4 flex-row justify-end gap-2 rounded-b-2xl">
+        <div className="px-8 py-4 flex justify-end gap-2">
           <Button
             variant="outline"
             onClick={handleCancel}
-            className="h-10 px-5 border-[#d1d5db] text-[#4b5563] font-medium text-[14px]"
+            className="h-10 w-[100px] border-[#d1d5db] text-[#4b5563] font-medium text-[14px] rounded-lg"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSave}
             disabled={!bed}
-            className="h-10 px-5 bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-semibold text-[14px]"
+            className="h-10 w-[140px] bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-semibold text-[14px] rounded-lg"
           >
             Save Changes
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   )

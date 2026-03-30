@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -71,6 +72,12 @@ export default function BedDetailPage() {
   return (
     <div className="space-y-6">
       <div>
+        <Link
+          href="/monitoring/realtime-station"
+          className="inline-flex items-center gap-1 text-[13px] font-medium text-[#2563eb] hover:text-[#1d4ed8] mb-2"
+        >
+          ← Back to Realtime Station
+        </Link>
         <h1 className="text-[22px] font-bold tracking-tight text-[#111827]">Bed Detail</h1>
         <p className="text-sm text-[#4b5563]">Single patient vital sign monitoring</p>
       </div>

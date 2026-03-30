@@ -116,7 +116,7 @@ export function AlarmHistoryModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[1024px] w-full p-0 gap-0 overflow-hidden" showCloseButton={true}>
+      <DialogContent className="sm:max-w-[1024px] w-full p-0 gap-0 overflow-hidden" showCloseButton={true}>
         {/* Header */}
         <DialogHeader className="px-8 pt-5 pb-0 gap-0">
           <DialogTitle className="text-[18px] font-semibold text-[#12171c]">Alarm History</DialogTitle>

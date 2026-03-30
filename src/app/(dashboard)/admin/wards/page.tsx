@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Pencil } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AddWardModal } from "@/components/admin/add-ward-modal"
 import { EditWardModal } from "@/components/admin/edit-ward-modal"
@@ -142,12 +143,14 @@ export default function WardsPage() {
                     <Badge className={statusBadgeClass[ward.status]}>{ward.status}</Badge>
                   </TableCell>
                   <TableCell className="px-6 py-3">
-                    <button
-                      className="text-[#2563eb] font-medium text-[13px] hover:underline"
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 text-[#2563eb] hover:text-[#1d4ed8]"
                       onClick={() => setEditTarget(ward)}
                     >
-                      Edit
-                    </button>
+                      <Pencil className="size-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}

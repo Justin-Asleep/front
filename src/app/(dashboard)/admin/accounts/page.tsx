@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table"
 
 import { cn } from "@/lib/utils"
+import { Pencil, Trash2 } from "lucide-react"
 import { PaginationBar } from "@/components/ui/pagination-bar"
 import { AddMemberModal } from "@/components/admin/add-member-modal"
 import { EditMemberModal } from "@/components/admin/edit-member-modal"
@@ -152,7 +153,7 @@ export default function AccountsPage() {
         </Button>
       </div>
 
-      <Card className="border border-[#e5e7eb] rounded-xl shadow-sm">
+      <Card className="rounded-xl shadow-sm">
         <CardContent className="p-0">
           {/* Toolbar */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-[#e5e7eb]">
@@ -227,19 +228,23 @@ export default function AccountsPage() {
                     </TableCell>
                     <TableCell className="px-4 py-3 text-[13px] text-[#4b5563]">{account.createdAt}</TableCell>
                     <TableCell className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <button
-                          className="text-[13px] font-medium text-[#2563eb] hover:text-[#1d4ed8]"
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-[#2563eb] hover:text-[#1d4ed8]"
                           onClick={() => setEditTarget(account)}
                         >
-                          Edit
-                        </button>
-                        <button
-                          className="text-[13px] font-medium text-[#dc2626] hover:text-[#b91c1c]"
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-[#dc2626] hover:text-[#b91c1c]"
                           onClick={() => setDeleteTarget(account)}
                         >
-                          Delete
-                        </button>
+                          <Trash2 className="size-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>

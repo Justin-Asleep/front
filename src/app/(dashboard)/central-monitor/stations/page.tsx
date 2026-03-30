@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Pencil } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AddStationModal } from "@/components/central-monitor/add-station-modal"
 import { EditStationModal } from "@/components/central-monitor/edit-station-modal"
@@ -137,10 +138,11 @@ export default function StationsPage() {
                   <TableCell className="px-4 py-3">
                     <Button
                       variant="ghost"
-                      className="h-8 px-3 text-sm text-[#2563eb] hover:text-[#1d4ed8]"
+                      size="icon"
+                      className="size-8 text-[#2563eb] hover:text-[#1d4ed8]"
                       onClick={() => setEditTarget(station)}
                     >
-                      Edit
+                      <Pencil className="size-4" />
                     </Button>
                   </TableCell>
                 </TableRow>

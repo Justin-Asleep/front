@@ -12,9 +12,9 @@ export type Tab = {
 export const tabs: Tab[] = [
   { id: "patients", label: "Patients", href: "/patients/list" },
   { id: "devices", label: "Devices", href: "/devices/tablets" },
-  { id: "monitoring", label: "Monitoring", href: "/monitoring/realtime-monitor" },
-  { id: "central-monitor", label: "Central Monitor", href: "/central-monitor/monitors" },
-  { id: "admin", label: "Admin Settings", href: "/admin/hospital-info" },
+  { id: "monitoring", label: "Monitoring", href: "/monitoring/realtime-station" },
+  { id: "central-monitor", label: "Central Monitor", href: "/central-monitor/stations" },
+  { id: "admin", label: "Admin Settings", href: "/admin/bed-status" },
 ];
 
 export const sidebarMenus: Record<string, MenuItem[]> = {
@@ -29,24 +29,20 @@ export const sidebarMenus: Record<string, MenuItem[]> = {
     { label: "Device Log", href: "/devices/log" },
   ],
   monitoring: [
+    { label: "Realtime Station", href: "/monitoring/realtime-station" },
     { label: "Realtime Monitor", href: "/monitoring/realtime-monitor" },
-    { label: "Station", href: "/monitoring/realtime-station" },
-    { label: "Alarm Status", href: "/monitoring/alarm-status" },
-    { label: "Bed Detail", href: "/monitoring/bed-detail" },
   ],
   "central-monitor": [
-    { label: "Monitor Reg", href: "/central-monitor/monitors" },
     { label: "Station Reg", href: "/central-monitor/stations" },
-    { label: "Bed Mapping", href: "/central-monitor/bed-mapping" },
-    { label: "URL Keys", href: "/central-monitor/url-keys" },
+    { label: "Monitor Reg", href: "/central-monitor/monitors" },
   ],
   admin: [
+    { label: "Bed Status", href: "/admin/bed-status" },
     { label: "Hospital Info", href: "/admin/hospital-info" },
     { label: "Accounts", href: "/admin/accounts" },
     { label: "Wards", href: "/admin/wards" },
     { label: "Rooms", href: "/admin/rooms" },
     { label: "Alarm Settings", href: "/admin/alarm-settings" },
-    { label: "Bed Status", href: "/admin/bed-status" },
   ],
 };
 

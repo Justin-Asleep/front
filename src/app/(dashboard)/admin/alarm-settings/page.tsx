@@ -75,16 +75,13 @@ export default function AlarmSettingsPage() {
         <p className="text-[14px] text-[#4b5563]">Configure vital parameter alarm thresholds</p>
       </div>
       <Card className="max-w-[1136px]">
-        <CardHeader className="border-b">
-          <CardTitle>Alarm Thresholds</CardTitle>
-        </CardHeader>
         <CardContent className="pt-0 px-0 pb-0">
           <Table>
             <TableHeader>
               <TableRow className="bg-[#f9fafb] h-[52px]">
-                <TableHead className="text-[13px] font-semibold text-[#9ca3af]">Parameter</TableHead>
+                <TableHead className="px-4 py-3 text-[12px] font-semibold text-[#9ca3af]">Parameter</TableHead>
                 {thresholdColumns.map(({ key, label }) => (
-                  <TableHead key={key} className="text-[13px] font-semibold text-[#9ca3af]">
+                  <TableHead key={key} className="px-4 py-3 text-[12px] font-semibold text-[#9ca3af]">
                     {label}
                   </TableHead>
                 ))}
@@ -93,7 +90,7 @@ export default function AlarmSettingsPage() {
             <TableBody>
               {parameters.map((param, idx) => (
                 <TableRow key={param.name} className={cn("h-[92px]", idx % 2 === 0 ? "bg-white" : "bg-[#fcfcfe]")}>
-                  <TableCell>
+                  <TableCell className="px-4">
                     <div className="flex items-start gap-2">
                       <span
                         className="w-2.5 h-2.5 rounded-full shrink-0 mt-[3px]"
@@ -143,7 +140,7 @@ export default function AlarmSettingsPage() {
 
           <div className="flex justify-end gap-3 px-6 h-[64px] items-center border-t border-[#e5e7eb]">
             <Button variant="outline">Cancel</Button>
-            <Button>Save Changes</Button>
+            <Button className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white">Save Changes</Button>
           </div>
         </CardContent>
       </Card>

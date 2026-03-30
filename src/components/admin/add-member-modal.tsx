@@ -18,28 +18,25 @@ import {
 } from "@/components/ui/select"
 
 type Role = "Admin" | "Nurse" | "Doctor"
-type Status = "Active" | "Inactive"
 
 interface AddMemberModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onAdd: (data: { name: string; email: string; role: Role; status: Status }) => void
+  onAdd: (data: { name: string; email: string; role: Role; status: "Active" }) => void
 }
 
 export function AddMemberModal({ open, onOpenChange, onAdd }: AddMemberModalProps) {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [role, setRole] = useState<Role | "">("")
-  const [status, setStatus] = useState<Status>("Active")
 
   function handleSubmit() {
     if (!name || !email || !role) return
-    onAdd({ name, email, role, status })
+    onAdd({ name, email, role, status: "Active" })
     onOpenChange(false)
     setName("")
     setEmail("")
     setRole("")
-    setStatus("Active")
   }
 
   function handleCancel() {
@@ -47,7 +44,6 @@ export function AddMemberModal({ open, onOpenChange, onAdd }: AddMemberModalProp
     setName("")
     setEmail("")
     setRole("")
-    setStatus("Active")
   }
 
   return (
@@ -113,18 +109,6 @@ export function AddMemberModal({ open, onOpenChange, onAdd }: AddMemberModalProp
             </Select>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-[14px] font-medium text-[#4b5563]">Status</label>
-            <Select value={status} onValueChange={(v) => setStatus(v as Status)}>
-              <SelectTrigger className="w-full h-10 border-[#d1d5db] rounded-lg text-[14px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Active">Active</SelectItem>
-                <SelectItem value="Inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </div>
 
         <div className="h-px bg-[#e5e7eb] mx-8" />

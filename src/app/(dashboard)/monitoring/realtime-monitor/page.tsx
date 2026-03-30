@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { cn } from "@/lib/utils"
 
 type VitalSign = {
@@ -17,45 +18,83 @@ type BedData = {
   hasAlarm?: boolean
 }
 
-const mockBeds: BedData[] = [
+type Monitor = {
+  id: string
+  name: string
+  beds: BedData[]
+}
+
+const monitors: Monitor[] = [
   {
-    id: "1", bed: "Bed 301-1", patient: "Kim Minjun",
-    vitals: [
-      { label: "HR", value: "72", unit: "bpm", color: "text-[#22c55e]" },
-      { label: "SpO2", value: "98", unit: "%", color: "text-[#38bdf8]" },
-      { label: "RR", value: "16", unit: "/min", color: "text-[#fbbf24]" },
-      { label: "Temp", value: "36.5", unit: "C", color: "text-[#a78bfb]" },
-      { label: "BP", value: "120/80", unit: "mmHg", color: "text-[#f87171]" },
+    id: "m1",
+    name: "ICU Monitor",
+    beds: [
+      {
+        id: "1", bed: "Bed 301-1", patient: "Kim Minjun",
+        vitals: [
+          { label: "HR", value: "72", unit: "bpm", color: "text-[#22c55e]" },
+          { label: "SpO2", value: "98", unit: "%", color: "text-[#38bdf8]" },
+          { label: "RR", value: "16", unit: "/min", color: "text-[#fbbf24]" },
+          { label: "Temp", value: "36.5", unit: "C", color: "text-[#a78bfb]" },
+          { label: "BP", value: "120/80", unit: "mmHg", color: "text-[#f87171]" },
+        ],
+      },
+      {
+        id: "2", bed: "Bed 301-2", patient: "Park Soyeon",
+        vitals: [
+          { label: "HR", value: "88", unit: "bpm", color: "text-[#22c55e]" },
+          { label: "SpO2", value: "95", unit: "%", color: "text-[#38bdf8]" },
+          { label: "RR", value: "20", unit: "/min", color: "text-[#fbbf24]" },
+          { label: "Temp", value: "37.2", unit: "C", color: "text-[#a78bfb]" },
+          { label: "BP", value: "135/85", unit: "mmHg", color: "text-[#f87171]" },
+        ],
+      },
+      {
+        id: "3", bed: "Bed 301-3", patient: "Lee Jungho",
+        vitals: [
+          { label: "HR", value: "65", unit: "bpm", color: "text-[#22c55e]" },
+          { label: "SpO2", value: "99", unit: "%", color: "text-[#38bdf8]" },
+          { label: "RR", value: "14", unit: "/min", color: "text-[#fbbf24]" },
+          { label: "Temp", value: "36.8", unit: "C", color: "text-[#a78bfb]" },
+          { label: "BP", value: "118/76", unit: "mmHg", color: "text-[#f87171]" },
+        ],
+      },
+      {
+        id: "4", bed: "Bed 302-1", patient: "Choi Yuna", hasAlarm: true,
+        vitals: [
+          { label: "HR", value: "102", unit: "bpm", color: "text-[#22c55e]" },
+          { label: "SpO2", value: "92", unit: "%", color: "text-[#38bdf8]" },
+          { label: "RR", value: "24", unit: "/min", color: "text-[#fbbf24]" },
+          { label: "Temp", value: "38.1", unit: "C", color: "text-[#a78bfb]" },
+          { label: "BP", value: "145/92", unit: "mmHg", color: "text-[#f87171]" },
+        ],
+      },
     ],
   },
   {
-    id: "2", bed: "Bed 301-2", patient: "Park Soyeon",
-    vitals: [
-      { label: "HR", value: "88", unit: "bpm", color: "text-[#22c55e]" },
-      { label: "SpO2", value: "95", unit: "%", color: "text-[#38bdf8]" },
-      { label: "RR", value: "20", unit: "/min", color: "text-[#fbbf24]" },
-      { label: "Temp", value: "37.2", unit: "C", color: "text-[#a78bfb]" },
-      { label: "BP", value: "135/85", unit: "mmHg", color: "text-[#f87171]" },
-    ],
-  },
-  {
-    id: "3", bed: "Bed 301-3", patient: "Lee Jungho",
-    vitals: [
-      { label: "HR", value: "65", unit: "bpm", color: "text-[#22c55e]" },
-      { label: "SpO2", value: "99", unit: "%", color: "text-[#38bdf8]" },
-      { label: "RR", value: "14", unit: "/min", color: "text-[#fbbf24]" },
-      { label: "Temp", value: "36.8", unit: "C", color: "text-[#a78bfb]" },
-      { label: "BP", value: "118/76", unit: "mmHg", color: "text-[#f87171]" },
-    ],
-  },
-  {
-    id: "4", bed: "Bed 302-1", patient: "Choi Yuna", hasAlarm: true,
-    vitals: [
-      { label: "HR", value: "102", unit: "bpm", color: "text-[#22c55e]" },
-      { label: "SpO2", value: "92", unit: "%", color: "text-[#38bdf8]" },
-      { label: "RR", value: "24", unit: "/min", color: "text-[#fbbf24]" },
-      { label: "Temp", value: "38.1", unit: "C", color: "text-[#a78bfb]" },
-      { label: "BP", value: "145/92", unit: "mmHg", color: "text-[#f87171]" },
+    id: "m2",
+    name: "Ward A Monitor",
+    beds: [
+      {
+        id: "5", bed: "Bed 401-1", patient: "Hwang Jiwoo",
+        vitals: [
+          { label: "HR", value: "68", unit: "bpm", color: "text-[#22c55e]" },
+          { label: "SpO2", value: "99", unit: "%", color: "text-[#38bdf8]" },
+          { label: "RR", value: "15", unit: "/min", color: "text-[#fbbf24]" },
+          { label: "Temp", value: "36.4", unit: "C", color: "text-[#a78bfb]" },
+          { label: "BP", value: "116/74", unit: "mmHg", color: "text-[#f87171]" },
+        ],
+      },
+      {
+        id: "6", bed: "Bed 401-2", patient: "Son Minji",
+        vitals: [
+          { label: "HR", value: "74", unit: "bpm", color: "text-[#22c55e]" },
+          { label: "SpO2", value: "97", unit: "%", color: "text-[#38bdf8]" },
+          { label: "RR", value: "16", unit: "/min", color: "text-[#fbbf24]" },
+          { label: "Temp", value: "36.6", unit: "C", color: "text-[#a78bfb]" },
+          { label: "BP", value: "122/78", unit: "mmHg", color: "text-[#f87171]" },
+        ],
+      },
     ],
   },
 ]
@@ -77,27 +116,41 @@ function EcgWaveform() {
 }
 
 export default function RealtimeMonitorPage() {
+  const [selected, setSelected] = useState(monitors[0])
+
   return (
     <div className="-m-6 p-6 min-h-full bg-[#f9fafb]">
       <div className="mb-4">
         <h1 className="text-[22px] font-bold tracking-tight text-[#111827]">Realtime Monitor</h1>
-        <p className="text-sm text-[#4b5563]">ICU Monitor - 4 beds connected</p>
+        <p className="text-sm text-[#4b5563]">{selected.name} - {selected.beds.length} beds connected</p>
       </div>
 
       {/* Monitor selector */}
       <div className="flex items-center gap-3 mb-4">
-        <div className="h-8 px-3 rounded-md border border-[#d1d5db] bg-white text-[13px] font-medium text-[#111827] flex items-center w-[200px]">
-          ICU Monitor
+        <div className="relative">
+          <select
+            value={selected.id}
+            onChange={(e) => {
+              const m = monitors.find((m) => m.id === e.target.value)
+              if (m) setSelected(m)
+            }}
+            className="h-8 w-[200px] pl-2.5 pr-7 rounded-[6px] border border-[#e8ebed] bg-white text-[13px] text-[#38404a] appearance-none cursor-pointer outline-none"
+          >
+            {monitors.map((m) => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
+          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[#a1a8b2]">▾</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-[#16a34a]" />
-          <span className="text-xs text-[#16a34a]">4 beds connected</span>
+          <span className="text-xs text-[#16a34a]">{selected.beds.length} beds connected</span>
         </div>
       </div>
 
       {/* 2x2 Grid */}
       <div className="grid grid-cols-2 gap-5">
-        {mockBeds.map((bed) => (
+        {selected.beds.map((bed) => (
           <div
             key={bed.id}
             className="bg-[#1a1b2e] rounded-xl shadow-[0px_4px_12px_0px_rgba(0,0,0,0.2)] p-4 flex flex-col min-h-[320px]"

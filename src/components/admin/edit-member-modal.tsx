@@ -16,6 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import { cn } from "@/lib/utils"
 
 type Role = "Admin" | "Nurse" | "Doctor"
 type Status = "Active" | "Inactive"
@@ -40,11 +42,11 @@ export function EditMemberModal({ open, onOpenChange, member, onSave }: EditMemb
   const [name, setName] = useState(member?.name ?? "")
   const [email, setEmail] = useState(member?.email ?? "")
   const [role, setRole] = useState<Role>(member?.role ?? "Nurse")
-  const [status, setStatus] = useState<Status>(member?.status ?? "Active")
+  const [active, setActive] = useState(member?.status !== "Inactive")
 
   function handleSubmit() {
     if (!member || !name || !email) return
-    onSave({ ...member, name, email, role, status })
+    onSave({ ...member, name, email, role, status: active ? "Active" : "Inactive" })
     onOpenChange(false)
   }
 
@@ -113,17 +115,26 @@ export function EditMemberModal({ open, onOpenChange, member, onSave }: EditMemb
             </Select>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <label className="text-[13px] font-medium text-[#111827]">Status</label>
-            <Select value={status} onValueChange={(v) => setStatus(v as Status)}>
-              <SelectTrigger className="w-full h-10 border-[#d1d5db] rounded-lg text-[14px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Active">Active</SelectItem>
-                <SelectItem value="Inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-3">
+              <Switch
+                checked={active}
+                onCheckedChange={(checked) => setActive(checked)}
+                aria-label="Status toggle"
+                className="data-checked:bg-[#16a34a]"
+              />
+              <span
+                className={cn(
+                  "inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-medium",
+                  active
+                    ? "bg-[#dcfce7] text-[#16a34a]"
+                    : "bg-[#f3f4f6] text-[#9ca3af]"
+                )}
+              >
+                {active ? "Active" : "Inactive"}
+              </span>
+            </div>
           </div>
         </div>
 

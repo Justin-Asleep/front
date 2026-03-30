@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 
 const WARD_OPTIONS = [
   { value: "internal-medicine", label: "Internal Medicine" },
@@ -154,16 +154,25 @@ export function EditStationModal({ open, onOpenChange, station, onSubmit }: Prop
           </div>
 
           {/* Status */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] text-[#6b737d]">Status</label>
-            <div className="flex items-center gap-2">
+          <div className="space-y-2">
+            <label className="text-[13px] font-medium text-[#111827]">Status</label>
+            <div className="flex items-center gap-3">
               <Switch
                 checked={active}
                 onCheckedChange={setActive}
+                aria-label="Status toggle"
+                className="data-checked:bg-[#16a34a]"
               />
-              <Badge className={active ? "bg-[#dbf7de] text-[#21c45e] border-0 rounded" : "bg-[#f3f4f6] text-[#9ca3af] border-0 rounded"}>
+              <span
+                className={cn(
+                  "inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-medium",
+                  active
+                    ? "bg-[#dcfce7] text-[#16a34a]"
+                    : "bg-[#f3f4f6] text-[#9ca3af]"
+                )}
+              >
                 {active ? "Active" : "Inactive"}
-              </Badge>
+              </span>
             </div>
           </div>
         </div>
