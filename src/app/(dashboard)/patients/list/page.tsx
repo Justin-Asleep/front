@@ -213,21 +213,21 @@ export default function PatientListPage() {
         </Button>
       </div>
 
-      <Card className="border border-[#e5e7eb] rounded-xl shadow-sm">
-        <CardContent className="p-0">
-          {/* Toolbar */}
-          <div className="flex items-center px-4 py-3 border-b border-[#e5e7eb]">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2 size-4 text-[#9ca3af] pointer-events-none" />
-              <Input
-                placeholder="Search patients..."
-                className="pl-8 w-[320px] h-8 border-[#d1d5db]"
-                value={search}
-                onChange={(e) => handleSearchChange(e.target.value)}
-              />
-            </div>
-          </div>
+      {/* Search + Filters */}
+      <div className="flex items-center gap-4">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2 size-4 text-[#9ca3af] pointer-events-none" />
+          <Input
+            placeholder="Search patients..."
+            className="pl-8 w-[300px] h-9 border-[#d1d5db]"
+            value={search}
+            onChange={(e) => handleSearchChange(e.target.value)}
+          />
+        </div>
+      </div>
 
+      <Card className="rounded-xl shadow-sm">
+        <CardContent className="p-0">
           {/* Table */}
           <Table>
             <TableHeader>

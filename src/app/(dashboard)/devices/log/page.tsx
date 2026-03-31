@@ -103,57 +103,51 @@ export default function DeviceLogPage() {
         <p className="text-sm text-[#4b5563]">Audit trail of device events and heartbeat activity</p>
       </div>
 
-      {/* Filter Bar */}
-      <Card className="shadow-sm">
-        <CardContent className="px-3 py-2 flex items-center gap-3">
-          {/* Device Select */}
-          <select
-            value={selectedDevice}
-            onChange={(e) => handleDeviceChange(e.target.value)}
-            className="h-8 px-2 rounded-md border border-[#e5e7eb] bg-[#f9fafb] text-xs text-[#4b5563] w-[200px]"
-          >
-            {DEVICES.map((d) => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
+      {/* Search + Filters */}
+      <div className="flex items-center gap-4">
+        <select
+          value={selectedDevice}
+          onChange={(e) => handleDeviceChange(e.target.value)}
+          className="h-9 px-3 rounded-lg border border-[#d1d5db] bg-white text-[13px] text-[#4b5563] w-[200px]"
+        >
+          {DEVICES.map((d) => (
+            <option key={d} value={d}>{d}</option>
+          ))}
+        </select>
 
-          {/* Date Range */}
-          <div className="h-8 px-2 rounded-md border border-[#e5e7eb] bg-[#f9fafb] text-[11px] text-[#4b5563] flex items-center w-[160px]">
-            From: 2026-03-20
-          </div>
-          <div className="h-8 px-2 rounded-md border border-[#e5e7eb] bg-[#f9fafb] text-[11px] text-[#4b5563] flex items-center w-[160px]">
-            To: 2026-03-27
-          </div>
+        <div className="h-9 px-3 rounded-lg border border-[#d1d5db] bg-white text-[13px] text-[#4b5563] flex items-center w-[160px]">
+          From: 2026-03-20
+        </div>
+        <div className="h-9 px-3 rounded-lg border border-[#d1d5db] bg-white text-[13px] text-[#4b5563] flex items-center w-[160px]">
+          To: 2026-03-27
+        </div>
 
-          {/* Event Type Filters */}
-          <div className="flex gap-1.5">
-            {EVENT_FILTERS.map((event) => (
-              <button
-                key={event}
-                onClick={() => handleEventChange(event)}
-                className={cn(
-                  "px-2 py-1 rounded-full text-[11px] font-medium transition-colors",
-                  selectedEvent === event
-                    ? "bg-[#2563eb] text-white"
-                    : "bg-[#f9fafb] border border-[#e5e7eb] text-[#4b5563] hover:bg-[#f3f4f6]"
-                )}
-              >
-                {event}
-              </button>
-            ))}
-          </div>
+        <div className="flex gap-2">
+          {EVENT_FILTERS.map((event) => (
+            <button
+              key={event}
+              onClick={() => handleEventChange(event)}
+              className={cn(
+                "px-3 py-1 rounded-full text-xs font-medium transition-colors",
+                selectedEvent === event
+                  ? "bg-[#2563eb] text-white"
+                  : "bg-white border border-[#d1d5db] text-[#4b5563] hover:bg-[#f9fafb]"
+              )}
+            >
+              {event}
+            </button>
+          ))}
+        </div>
 
-          <div className="flex-1" />
+        <div className="flex-1" />
 
-          {/* Export */}
-          <Button variant="outline" size="sm" className="h-8 text-[11px] font-medium text-[#4b5563] border-[#d1d5db]">
-            Export CSV
-          </Button>
-        </CardContent>
-      </Card>
+        <Button variant="outline" size="sm" className="h-9 text-xs font-medium text-[#4b5563] border-[#d1d5db]">
+          Export CSV
+        </Button>
+      </div>
 
       {/* Log Table */}
-      <Card className="border border-[#e5e7eb] rounded-xl shadow-sm">
+      <Card className="rounded-xl shadow-sm">
         <CardContent className="p-0">
           <Table>
             <TableHeader>

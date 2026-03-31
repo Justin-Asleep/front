@@ -130,10 +130,9 @@ export default function WardsPage() {
                 <TableRow
                   key={ward.id}
                   className={cn(
-                    "border-b border-[#e5e7eb] cursor-pointer",
+                    "border-b border-[#e5e7eb]",
                     idx % 2 === 1 ? "bg-[#f9fafb]" : "bg-white"
                   )}
-                  onClick={() => router.push('/admin/wards/' + ward.id)}
                 >
                   <TableCell className="px-6 py-3 font-medium text-[#111827]">{ward.name}</TableCell>
                   <TableCell className="px-6 py-3 text-[#4b5563]">{ward.floor}</TableCell>
@@ -150,7 +149,7 @@ export default function WardsPage() {
                       variant="ghost"
                       size="icon"
                       className="size-8 text-[#2563eb] hover:text-[#1d4ed8]"
-                      onClick={(e: React.MouseEvent) => { e.stopPropagation(); setEditTarget(ward) }}
+                      onClick={() => router.push('/admin/wards/' + ward.id)}
                     >
                       <Pencil className="size-4" />
                     </Button>

@@ -134,7 +134,7 @@ export default function RealtimeMonitorPage() {
               const m = monitors.find((m) => m.id === e.target.value)
               if (m) setSelected(m)
             }}
-            className="h-8 w-[200px] pl-2.5 pr-7 rounded-[6px] border border-[#e8ebed] bg-white text-[13px] text-[#38404a] appearance-none cursor-pointer outline-none"
+            className="h-9 w-[200px] pl-2.5 pr-7 rounded-lg border border-[#d1d5db] bg-white text-[13px] text-[#4b5563] appearance-none cursor-pointer outline-none"
           >
             {monitors.map((m) => (
               <option key={m.id} value={m.id}>{m.name}</option>

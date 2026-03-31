@@ -237,12 +237,25 @@ export default function WardDetailPage({
                   {room.type} · {room.beds} beds
                 </p>
               </div>
-              <p
-                className="text-sm font-medium"
-                style={{ color: room.occupied > 0 ? "#dc2626" : "#16a34a" }}
-              >
-                ● {room.occupied} occupied
-              </p>
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] text-[#4b5563]">
+                  {room.occupied}/{room.beds} occupied
+                </span>
+                <span className="text-[12px] font-medium text-[#2563eb]"
+                  style={{ opacity: 0.4 + (room.occupied / room.beds) * 0.6 }}
+                >
+                  {room.available} available
+                </span>
+              </div>
+              <div className="w-full h-1.5 rounded-full bg-[#f3f4f6] overflow-hidden">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${(room.occupied / room.beds) * 100}%`,
+                    backgroundColor: `rgba(37, 99, 235, ${0.3 + (room.occupied / room.beds) * 0.7})`,
+                  }}
+                />
+              </div>
               <div className="flex gap-2">
                 <Button
                   variant="outline"

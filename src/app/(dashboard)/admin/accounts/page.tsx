@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table"
 
 import { cn } from "@/lib/utils"
-import { Pencil, Trash2 } from "lucide-react"
+import { Search, Pencil, Trash2 } from "lucide-react"
 import { PaginationBar } from "@/components/ui/pagination-bar"
 import { AddMemberModal } from "@/components/admin/add-member-modal"
 import { EditMemberModal } from "@/components/admin/edit-member-modal"
@@ -153,34 +153,37 @@ export default function AccountsPage() {
         </Button>
       </div>
 
+      {/* Search + Filters */}
+      <div className="flex items-center gap-4">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2 size-4 text-[#9ca3af] pointer-events-none" />
+          <Input
+            placeholder="Search by name or email..."
+            className="pl-8 w-[300px] h-9 border-[#d1d5db]"
+            value={search}
+            onChange={(e) => handleSearchChange(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-2">
+          {ROLE_FILTERS.map((role) => (
+            <button
+              key={role}
+              onClick={() => handleRoleChange(role)}
+              className={cn(
+                "px-3 py-1 rounded-full text-xs font-medium transition-colors",
+                selectedRole === role
+                  ? "bg-[#2563eb] text-white"
+                  : "bg-white border border-[#d1d5db] text-[#4b5563] hover:bg-[#f9fafb]"
+              )}
+            >
+              {role}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <Card className="rounded-xl shadow-sm">
         <CardContent className="p-0">
-          {/* Toolbar */}
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-[#e5e7eb]">
-            <Input
-              placeholder="Search by name or email..."
-              className="w-[300px] h-[38px] border-[#d1d5db]"
-              value={search}
-              onChange={(e) => handleSearchChange(e.target.value)}
-            />
-            <div className="flex gap-2">
-              {ROLE_FILTERS.map((role) => (
-                <button
-                  key={role}
-                  onClick={() => handleRoleChange(role)}
-                  className={cn(
-                    "px-3 h-[32px] rounded-full text-[13px] font-medium transition-colors",
-                    selectedRole === role
-                      ? "bg-[#2563eb] text-white"
-                      : "bg-white border border-[#d1d5db] text-[#4b5563] hover:bg-[#f9fafb]"
-                  )}
-                >
-                  {role}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Table */}
           <Table>
             <TableHeader>
