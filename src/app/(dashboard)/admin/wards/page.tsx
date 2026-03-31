@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -63,6 +64,7 @@ function OccupancyBar({ value }: { value: number }) {
 }
 
 export default function WardsPage() {
+  const router = useRouter()
   const [wards, setWards] = useState<Ward[]>(initialWards)
   const [addOpen, setAddOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Ward | null>(null)
@@ -109,7 +111,7 @@ export default function WardsPage() {
         </Button>
       </div>
 
-      <Card className="rounded-xl shadow-[0px_1px_3px_0px_rgba(0,0,0,0.06)]">
+      <Card className="rounded-xl shadow-sm">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -128,9 +130,10 @@ export default function WardsPage() {
                 <TableRow
                   key={ward.id}
                   className={cn(
-                    "border-b border-[#e5e7eb]",
+                    "border-b border-[#e5e7eb] cursor-pointer",
                     idx % 2 === 1 ? "bg-[#f9fafb]" : "bg-white"
                   )}
+                  onClick={() => router.push('/admin/wards/' + ward.id)}
                 >
                   <TableCell className="px-6 py-3 font-medium text-[#111827]">{ward.name}</TableCell>
                   <TableCell className="px-6 py-3 text-[#4b5563]">{ward.floor}</TableCell>
@@ -147,7 +150,7 @@ export default function WardsPage() {
                       variant="ghost"
                       size="icon"
                       className="size-8 text-[#2563eb] hover:text-[#1d4ed8]"
-                      onClick={() => setEditTarget(ward)}
+                      onClick={(e: React.MouseEvent) => { e.stopPropagation(); setEditTarget(ward) }}
                     >
                       <Pencil className="size-4" />
                     </Button>

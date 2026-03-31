@@ -39,7 +39,6 @@ export const sidebarMenus: Record<string, MenuItem[]> = {
     { label: "Hospital Info", href: "/admin/hospital-info" },
     { label: "Accounts", href: "/admin/accounts" },
     { label: "Wards", href: "/admin/wards" },
-    { label: "Rooms", href: "/admin/rooms" },
     { label: "Alarm Settings", href: "/admin/alarm-settings" },
   ],
 };
