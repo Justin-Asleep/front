@@ -96,7 +96,7 @@ export default function StationsPage() {
         </Button>
       </div>
 
-      <Card className="border border-[#e5e7eb] rounded-xl shadow-sm">
+      <Card className="rounded-xl shadow-sm">
         <CardContent className="p-0">
           <Table>
             <TableHeader>

@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { AlarmHistoryModal } from "@/components/monitoring/alarm-history-modal"
-import { Tablet, BatteryMedium } from "lucide-react"
+import { Tablet, BatteryMedium, AlertTriangle, AlertOctagon } from "lucide-react"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -202,42 +202,42 @@ const stations: Station[] = [
 // ── Style Maps ─────────────────────────────────────────────────────────────
 
 const cardBg: Record<BedStatus, string> = {
-  normal:   "bg-[#eff2fe]",
-  warning:  "bg-[#fff7ed]",
-  critical: "bg-[#fef2f2]",
-  empty:    "bg-[#f9fafb]",
+  normal:   "bg-status-info-bg",
+  warning:  "bg-status-warning-bg",
+  critical: "bg-status-critical-bg",
+  empty:    "bg-status-empty-bg",
 }
 
 const cardBorder: Record<BedStatus, string> = {
-  normal:   "border border-[#2563eb]",
-  warning:  "border border-[#f97316]",
-  critical: "border-2 border-[#ef4444]",
-  empty:    "border border-dashed border-[#d4d7dc]",
+  normal:   "border border-status-info",
+  warning:  "border border-status-warning",
+  critical: "border-2 border-status-critical",
+  empty:    "border border-dashed border-status-empty",
 }
 
 const leftBarBg: Record<BedStatus, string> = {
-  normal:   "bg-[#2563eb]",
-  warning:  "bg-[#f97316]",
-  critical: "bg-[#ef4444]",
-  empty:    "bg-[#d4d7dc]",
+  normal:   "bg-status-info",
+  warning:  "bg-status-warning",
+  critical: "bg-status-critical",
+  empty:    "bg-status-empty",
 }
 
 const bannerBg: Record<"warning" | "critical", string> = {
-  warning:  "bg-[#f97316]",
-  critical: "bg-[#ef4444]",
+  warning:  "bg-status-warning",
+  critical: "bg-status-critical animate-critical-pulse",
 }
 
 const defaultVitalColor: Record<string, string> = {
-  hr:   "#22c55e",
-  spo2: "#38bdf8",
-  rr:   "#fbbf24",
-  temp: "#a78bfb",
-  bp:   "#f87171",
+  hr:   "var(--vital-hr)",
+  spo2: "var(--vital-spo2)",
+  rr:   "var(--vital-rr)",
+  temp: "var(--vital-temp)",
+  bp:   "var(--vital-bp)",
 }
 
 function vitalColor(vitalKey: string, status: VitalStatus): string {
-  if (status === "critical") return "#ef4444"
-  if (status === "warning")  return "#f97316"
+  if (status === "critical") return "var(--status-critical)"
+  if (status === "warning")  return "var(--status-warning)"
   return defaultVitalColor[vitalKey]
 }
 
@@ -247,7 +247,7 @@ function VitalCell({ label, value, color }: { label: string; value: string | num
   const displayVal = value != null ? String(value) : "--"
   return (
     <div className="flex flex-col gap-[2px]">
-      <span className="text-[10px] text-[#4b5563]">{label}</span>
+      <span className="text-[11px] text-muted-foreground">{label}</span>
       <span className="text-[15px] font-bold leading-none" style={{ color }}>
         {displayVal}
       </span>
@@ -257,13 +257,12 @@ function VitalCell({ label, value, color }: { label: string; value: string | num
 
 function SensorBattery({ label, pct }: { label: string; pct: number | undefined }) {
   const isOff = pct == null || pct === 0
-  const fillWidth = isOff ? 0 : Math.round((pct / 100) * 16)
   const fillColor = isOff ? "transparent" : pct! >= 60 ? "#16a34a" : pct! >= 30 ? "#f97316" : "#ef4444"
   return (
     <div className="flex items-center gap-0.5">
-      <span className={cn("text-[9px] font-medium", isOff ? "text-[#a1a8b2]" : "text-[#38404a]")}>{label}</span>
-      <BatteryMedium className={cn("size-[10px]", isOff ? "text-[#a1a8b2]" : "text-[#6b737d]")} />
-      <span className={cn("text-[9px]", isOff ? "text-[#a1a8b2]" : "text-[#4b5563]")}>
+      <span className={cn("text-[11px] font-medium", isOff ? "text-muted-foreground" : "text-foreground")}>{label}</span>
+      <BatteryMedium className={cn("size-[10px]", isOff ? "text-muted-foreground" : "text-muted-foreground")} style={{ color: isOff ? undefined : fillColor }} />
+      <span className={cn("text-[11px]", isOff ? "text-muted-foreground" : "text-muted-foreground")}>
         {isOff ? "--" : `${pct}%`}
       </span>
     </div>
@@ -272,11 +271,11 @@ function SensorBattery({ label, pct }: { label: string; pct: number | undefined 
 
 function EmptyBedCard({ bed }: { bed: StationBed }) {
   return (
-    <div className={cn("rounded-[8px] min-h-[168px] overflow-hidden relative flex cursor-default", cardBorder.empty, cardBg.empty)}>
-      <div className="w-1 flex-shrink-0 bg-[#d4d7dc]" />
+    <div aria-label={`${bed.bed} — unoccupied`} className={cn("rounded-[8px] min-h-[168px] overflow-hidden relative flex cursor-default", cardBorder.empty, cardBg.empty)}>
+      <div className={cn("w-1 flex-shrink-0", leftBarBg.empty)} />
       <div className="flex flex-col justify-center px-3 py-3">
-        <p className="text-[12px] font-medium text-[#6b737d]">{bed.bed}</p>
-        <p className="text-[14px] text-[#a1a8b2] mt-1">Empty Bed</p>
+        <p className="text-[12px] font-medium text-muted-foreground">{bed.bed}</p>
+        <p className="text-[14px] text-muted-foreground mt-1">Empty Bed</p>
       </div>
     </div>
   )
@@ -299,10 +298,10 @@ function OccupiedBedCard({ bed, onClick }: { bed: StationBed; onClick: () => voi
       tabIndex={0}
       onClick={onClick}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick() } }}
-      aria-label={`${bed.bed} - ${bed.patient}`}
+      aria-label={`${bed.bed} - ${bed.patient}${bed.alarmMessage ? ` - ALARM: ${bed.alarmMessage}` : ""}`}
       className={cn(
         "rounded-[8px] min-h-[168px] overflow-hidden relative flex cursor-pointer",
-        "hover:shadow-md focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:outline-none transition-shadow duration-200",
+        "hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none transition-shadow duration-200",
         cardBorder[bed.status],
         cardBg[bed.status]
       )}
@@ -313,44 +312,57 @@ function OccupiedBedCard({ bed, onClick }: { bed: StationBed; onClick: () => voi
       <div className="flex flex-col flex-1 min-w-0">
         {/* Alarm banner */}
         {hasBanner && (
-          <div className={cn("flex items-center px-3 h-5 flex-shrink-0", bannerBg[bed.status as "warning" | "critical"])}>
-            <span className="text-[10px] font-bold text-white truncate">{bed.alarmMessage}</span>
+          <div className={cn("flex items-center gap-1.5 px-3 h-7 flex-shrink-0", bannerBg[bed.status as "warning" | "critical"])}>
+            {bed.status === "critical" ? (
+              <AlertOctagon className="size-3 text-white flex-shrink-0" />
+            ) : (
+              <AlertTriangle className="size-3 text-white flex-shrink-0" />
+            )}
+            <span className="text-[12px] font-bold text-white overflow-hidden text-ellipsis whitespace-nowrap" title={bed.alarmMessage}>
+              {bed.alarmMessage}
+            </span>
           </div>
         )}
 
         <div className="flex flex-col flex-1 px-3 py-2 gap-0 min-h-0">
           {/* Header: bed name + patient ID */}
           <div className="flex items-start justify-between">
-            <span className="text-[11px] font-medium text-[#38404a]">{bed.bed}</span>
-            <span className="text-[10px] text-[#6b737d] ml-1 flex-shrink-0">{bed.patientId}</span>
+            <span className="text-[11px] font-medium text-foreground">{bed.bed}</span>
+            <span className="text-[10px] text-muted-foreground ml-1 flex-shrink-0">{bed.patientId}</span>
           </div>
 
           {/* Patient name */}
-          <p className="text-[14px] font-bold text-[#12171c] mt-0.5 leading-tight">{bed.patient}</p>
+          <p className="text-[14px] font-bold text-foreground mt-0.5 leading-tight">{bed.patient}</p>
 
           {/* Divider */}
-          <div className="h-px bg-[#d9dee5] my-1.5" />
+          <div className="h-px bg-border my-1.5" />
 
           {/* Vitals row */}
-          <div className="grid grid-cols-5 gap-0">
+          <div className="grid grid-cols-5 gap-x-1">
             {vitals.map(({ key, label, vital }) => (
               <VitalCell
                 key={key}
                 label={label}
                 value={vital?.value}
-                color={vital ? vitalColor(key, vital.status) : "#a1a8b2"}
+                color={vital ? vitalColor(key, vital.status) : "var(--muted-foreground)"}
               />
             ))}
           </div>
 
           {/* Divider */}
-          <div className="h-px bg-[#d9dee5] my-1.5" />
+          <div className="h-px bg-border my-1.5" />
 
           {/* Footer: tablet + sensor batteries (single row) */}
           <div className="flex items-center gap-2 mt-auto">
-            <div className="flex items-center gap-1 text-[10px] font-medium text-[#6b737d]">
-              <Tablet className="size-[10px]" />
-              <span>{bed.tablet ? `${bed.tablet.id} ${bed.tablet.battery}%` : "--"}</span>
+            <div className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+              <Tablet className="size-[11px]" />
+              <span className={cn(
+                bed.tablet && bed.tablet.battery < 30 ? "text-status-critical font-bold" :
+                bed.tablet && bed.tablet.battery < 60 ? "text-status-warning" :
+                "text-muted-foreground"
+              )}>
+                {bed.tablet ? `${bed.tablet.id} ${bed.tablet.battery}%` : "--"}
+              </span>
             </div>
             <div className="ml-auto flex items-center gap-2">
               <SensorBattery label="ECG"  pct={bed.signals?.ecg} />
@@ -378,15 +390,15 @@ export default function RealtimeStationPage() {
 
   function handleCardClick(bed: StationBed) {
     if (bed.status === "empty") return
-    router.push(`/monitoring/bed-detail?bed=${bed.id}`)
+    router.push(`/monitoring/patient-monitor?bed=${bed.id}`)
   }
 
   return (
     <div className="space-y-4">
       {/* Page header */}
       <div>
-        <h1 className="text-[22px] font-bold text-[#12171c]">Realtime Station</h1>
-        <p className="text-[14px] text-[#6b737d]">{selectedStation.name}</p>
+        <h1 className="text-[22px] font-bold text-foreground">Realtime Station</h1>
+        <p className="text-[14px] text-muted-foreground">{selectedStation.name}</p>
       </div>
 
       {/* Toolbar */}
@@ -399,24 +411,24 @@ export default function RealtimeStationPage() {
               const s = stations.find((s) => s.id === e.target.value)
               if (s) setSelectedStation(s)
             }}
-            className="h-8 w-[200px] pl-2.5 pr-7 rounded-[6px] border border-[#e8ebed] bg-white text-[13px] text-[#38404a] appearance-none cursor-pointer outline-none"
+            className="h-9 w-[200px] pl-2.5 pr-7 rounded-[6px] border border-[#d1d5db] bg-white text-[13px] text-foreground appearance-none cursor-pointer outline-none"
           >
             {stations.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
           </select>
-          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[#a1a8b2]">▾</span>
+          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">▾</span>
         </div>
 
         {/* Occupancy bar */}
         <div className="flex flex-col gap-1 w-[200px]">
           <div className="flex justify-between">
-            <span className="text-[12px] font-medium text-[#38404a]">{occupiedCount}/{beds.length} occupied</span>
-            <span className="text-[12px] font-medium text-[#2563eb]">{occupancyPct}%</span>
+            <span className="text-[12px] font-medium text-foreground">{occupiedCount}/{beds.length} occupied</span>
+            <span className="text-[12px] font-medium text-status-info">{occupancyPct}%</span>
           </div>
-          <div className="h-2 w-full bg-[#e0e9fc] rounded-[4px] overflow-hidden">
+          <div className="h-2 w-full bg-status-info-bg rounded-[4px] overflow-hidden">
             <div
-              className="h-2 bg-[#2563eb] rounded-[4px]"
+              className="h-2 bg-status-info rounded-[4px]"
               style={{ width: `${occupancyPct}%` }}
             />
           </div>
@@ -425,11 +437,11 @@ export default function RealtimeStationPage() {
         {/* Alarm History button */}
         <button
           onClick={() => setHistoryOpen(true)}
-          className="ml-auto h-10 px-4 flex items-center justify-center gap-1.5 rounded-[6px] border border-[#e8ebed] bg-white hover:bg-[#f9fafb] focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:outline-none transition-colors duration-200"
+          className="ml-auto h-10 px-4 flex items-center justify-center gap-1.5 rounded-[6px] border border-border bg-white hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none transition-colors duration-200"
         >
-          <span className="text-[12px] font-medium text-[#2563eb]">Alarm History</span>
+          <span className="text-[12px] font-medium text-status-info">Alarm History</span>
           {alarmCount > 0 && (
-            <span className="flex items-center justify-center w-[18px] h-[18px] rounded-full bg-[#ef4444] text-white text-[10px] font-bold leading-none">
+            <span className="flex items-center justify-center w-[18px] h-[18px] rounded-full bg-status-critical text-white text-[10px] font-bold leading-none">
               {alarmCount}
             </span>
           )}

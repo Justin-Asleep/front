@@ -23,6 +23,25 @@
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
+
+  /* Healthcare status */
+  --color-status-critical: var(--status-critical);
+  --color-status-critical-bg: var(--status-critical-bg);
+  --color-status-warning: var(--status-warning);
+  --color-status-warning-bg: var(--status-warning-bg);
+  --color-status-normal: var(--status-normal);
+  --color-status-normal-bg: var(--status-normal-bg);
+  --color-status-info: var(--status-info);
+  --color-status-info-bg: var(--status-info-bg);
+  --color-status-empty: var(--status-empty);
+  --color-status-empty-bg: var(--status-empty-bg);
+
+  /* Vital signs */
+  --color-vital-hr: var(--vital-hr);
+  --color-vital-spo2: var(--vital-spo2);
+  --color-vital-rr: var(--vital-rr);
+  --color-vital-temp: var(--vital-temp);
+  --color-vital-bp: var(--vital-bp);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -73,6 +92,25 @@
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
+
+  /* Healthcare status colors */
+  --status-critical: oklch(0.577 0.245 27.3);
+  --status-critical-bg: oklch(0.95 0.02 27.3);
+  --status-warning: oklch(0.702 0.191 46.5);
+  --status-warning-bg: oklch(0.96 0.02 75);
+  --status-normal: oklch(0.6 0.17 145);
+  --status-normal-bg: oklch(0.95 0.03 145);
+  --status-info: oklch(0.546 0.245 262.9);
+  --status-info-bg: oklch(0.95 0.03 262.9);
+  --status-empty: oklch(0.872 0 0);
+  --status-empty-bg: oklch(0.975 0 0);
+
+  /* Vital sign colors */
+  --vital-hr: oklch(0.723 0.191 145);
+  --vital-spo2: oklch(0.685 0.169 213);
+  --vital-rr: oklch(0.795 0.16 84);
+  --vital-temp: oklch(0.7 0.15 300);
+  --vital-bp: oklch(0.7 0.19 22);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -115,6 +153,25 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+
+  /* Healthcare status colors - dark mode */
+  --status-critical: oklch(0.704 0.191 22.2);
+  --status-critical-bg: oklch(0.25 0.05 27.3);
+  --status-warning: oklch(0.75 0.16 55);
+  --status-warning-bg: oklch(0.25 0.04 55);
+  --status-normal: oklch(0.7 0.17 145);
+  --status-normal-bg: oklch(0.25 0.04 145);
+  --status-info: oklch(0.65 0.2 262.9);
+  --status-info-bg: oklch(0.25 0.04 262.9);
+  --status-empty: oklch(0.371 0 0);
+  --status-empty-bg: oklch(0.22 0 0);
+
+  /* Vital sign colors - dark mode (slightly brighter for dark bg) */
+  --vital-hr: oklch(0.78 0.18 145);
+  --vital-spo2: oklch(0.74 0.15 213);
+  --vital-rr: oklch(0.83 0.15 84);
+  --vital-temp: oklch(0.75 0.14 300);
+  --vital-bp: oklch(0.75 0.17 22);
 }
 
 @layer base {
@@ -126,5 +183,18 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+@keyframes critical-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@utility animate-critical-pulse {
+  animation: critical-pulse 1.5s ease-in-out infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
   }
 }

@@ -26,8 +26,7 @@ const VITALS = [
     label: "Heart Rate",
     value: "78",
     unit: "bpm",
-    color: "#22c55e",
-    bgColor: "#e5fdea",
+    color: "var(--vital-hr)",
     data: [72, 75, 71, 78, 82, 79, 74, 76, 73, 78],
   },
   {
@@ -35,8 +34,7 @@ const VITALS = [
     label: "SpO2",
     value: "97",
     unit: "%",
-    color: "#38bef8",
-    bgColor: "#eaf7fe",
+    color: "var(--vital-spo2)",
     data: [97, 98, 97, 96, 98, 99, 97, 98, 96, 97],
   },
   {
@@ -44,17 +42,15 @@ const VITALS = [
     label: "Resp Rate",
     value: "16",
     unit: "rpm",
-    color: "#fbbf24",
-    bgColor: "#fff9e5",
+    color: "var(--vital-rr)",
     data: [16, 17, 15, 18, 16, 17, 15, 16, 18, 16],
   },
   {
     key: "Temp",
     label: "Temp",
     value: "36.8",
-    unit: "C",
-    color: "#a78bfb",
-    bgColor: "#f6f4ff",
+    unit: "°C",
+    color: "var(--vital-temp)",
     data: [36.5, 36.6, 36.7, 36.8, 36.9, 37.0, 36.8, 36.7, 36.6, 36.8],
   },
   {
@@ -62,8 +58,7 @@ const VITALS = [
     label: "Blood Press",
     value: "122/80",
     unit: "mmHg",
-    color: "#f87171",
-    bgColor: "#fff2f2",
+    color: "var(--vital-bp)",
     data: [118, 122, 120, 125, 119, 121, 123, 118, 120, 122],
   },
 ] as const
@@ -75,6 +70,22 @@ const mockMeasurements = [
   { time: "13:00", hr: 75, spo2: 98, rr: 16, temp: 36.6, bp: "118/76" },
   { time: "12:30", hr: 77, spo2: 97, rr: 15, temp: 36.8, bp: "121/79" },
   { time: "12:00", hr: 79, spo2: 97, rr: 16, temp: 36.8, bp: "123/81" },
+]
+
+const vitalColorMap: Record<string, string> = {
+  hr: "var(--vital-hr)",
+  spo2: "var(--vital-spo2)",
+  rr: "var(--vital-rr)",
+  temp: "var(--vital-temp)",
+  bp: "var(--vital-bp)",
+}
+
+const trendColumns: Array<{ key: keyof (typeof mockMeasurements)[0]; label: string }> = [
+  { key: "hr", label: "HR" },
+  { key: "spo2", label: "SpO2" },
+  { key: "rr", label: "RR" },
+  { key: "temp", label: "Temp" },
+  { key: "bp", label: "BP" },
 ]
 
 // ── SVG Sparkline helpers ──────────────────────────────────────────────────────
@@ -123,26 +134,26 @@ export default function MeasurementPage() {
       <div>
         <Link
           href="/patients/list"
-          className="inline-flex items-center gap-1 text-[13px] font-medium text-[#2563eb] hover:text-[#1d4ed8] mb-2"
+          className="inline-flex items-center gap-1 text-[13px] font-medium text-status-info hover:text-status-info/80 mb-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none rounded-sm"
         >
           ← Back to Patient List
         </Link>
-        <h1 className="text-[22px] font-bold text-[#111827]">Measurement History</h1>
-        <p className="text-[14px] text-[#4b5563]">Vital sign trends and historical data</p>
+        <h1 className="text-[22px] font-bold text-foreground">Measurement History</h1>
+        <p className="text-[14px] text-muted-foreground">Vital sign trends and historical data</p>
       </div>
 
       {/* Patient info card */}
-      <Card className="rounded-[12px] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.06)]">
+      <Card className="shadow-sm">
         <CardContent className="flex items-center px-4 py-0 h-[80px]">
           <div className="flex items-center gap-3">
             <Avatar className="size-12">
-              <AvatarFallback className="bg-[#eff6ff] text-[#2563eb] font-bold text-sm">
+              <AvatarFallback className="bg-status-info-bg text-status-info font-bold text-sm">
                 KM
               </AvatarFallback>
             </Avatar>
             <div>
-              <p className="text-[16px] font-bold text-[#111827]">Kim Minjun</p>
-              <p className="text-[12px] text-[#9ca3af]">
+              <p className="text-base font-bold text-foreground">Kim Minjun</p>
+              <p className="text-xs text-muted-foreground">
                 MRN: P-001234 &nbsp;|&nbsp; Ward 3 - Bed 301-1 &nbsp;|&nbsp; Admitted: 2026-03-20
               </p>
             </div>
@@ -151,59 +162,47 @@ export default function MeasurementPage() {
       </Card>
 
       {/* Time range toggle */}
-      <div className="rounded-[8px] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.06)] bg-white w-fit">
-        <div className="flex items-center gap-3 px-3 h-[36px]">
-          <span className="text-[12px] font-medium text-[#9ca3af]">Range:</span>
+      <Card className="shadow-sm w-fit">
+        <CardContent className="flex items-center gap-3 px-3 py-1">
+          <span className="text-[12px] font-medium text-muted-foreground">Range:</span>
           <div className="flex gap-1">
             {TIME_RANGES.map((range) => (
               <button
                 key={range}
                 onClick={() => setActiveRange(range)}
                 className={cn(
-                  "w-[52px] h-[28px] rounded-[6px] text-[12px] font-medium transition-colors",
+                  "w-[52px] h-[28px] rounded-md text-[12px] font-medium transition-colors",
                   activeRange === range
-                    ? "bg-[#2563eb] text-white font-semibold"
-                    : "bg-[#f9fafb] text-[#4b5563] hover:bg-[#f3f4f6]"
+                    ? "bg-status-info text-white font-semibold"
+                    : "bg-muted text-muted-foreground hover:bg-accent"
                 )}
               >
                 {range}
               </button>
             ))}
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Vital trend sparkline cards */}
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {VITALS.map((v) => (
-          <div
-            key={v.key}
-            className="flex flex-col rounded-[12px] bg-white overflow-hidden shadow-[0px_1px_3px_0px_rgba(0,0,0,0.06)] h-[156px]"
-          >
-            {/* Top color bar */}
-            <div style={{ height: 4, backgroundColor: v.color, flexShrink: 0 }} />
-
-            <div className="flex flex-col gap-1 px-3.5 pt-2.5 pb-3">
-              {/* Parameter label */}
-              <span className="text-[11px] text-[#9ca3af] font-semibold">
+          <Card key={v.key} className="shadow-sm overflow-hidden">
+            <div className="h-1" style={{ backgroundColor: v.color }} />
+            <CardContent className="p-4">
+              <p className="text-[11px] font-semibold text-muted-foreground mb-1">
                 {v.label}
-              </span>
-
-              {/* Value */}
-              <span
-                className="text-[24px] font-bold leading-none"
+              </p>
+              <p
+                className="text-[28px] font-bold leading-none mb-1"
                 style={{ color: v.color }}
               >
                 {v.value}
-              </span>
-
-              {/* Unit */}
-              <span className="text-[11px] text-[#9ca3af]">{v.unit}</span>
-
-              {/* Sparkline */}
+              </p>
+              <p className="text-[11px] text-muted-foreground mb-2">{v.unit}</p>
               <div
-                className="rounded-[6px] overflow-hidden w-full mt-1"
-                style={{ height: H, backgroundColor: v.bgColor }}
+                className="rounded-md overflow-hidden w-full"
+                style={{ height: H }}
               >
                 <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
                   <path
@@ -221,52 +220,56 @@ export default function MeasurementPage() {
                   />
                 </svg>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
       {/* Recent Measurements table */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-[15px] font-semibold text-[#111827]">Recent Measurements</h2>
-          <button className="h-[32px] w-[100px] border border-[#d1d5db] rounded-[6px] text-[12px] font-medium text-[#4b5563] bg-white hover:bg-[#f9fafb]">
+          <h2 className="text-[15px] font-semibold text-foreground">Recent Measurements</h2>
+          <button className="h-8 px-4 border border-border rounded-md text-[12px] font-medium text-muted-foreground bg-card hover:bg-muted transition-colors">
             Export CSV
           </button>
         </div>
 
-        <Card className="rounded-[12px] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.06)]">
+        <Card className="shadow-sm">
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-[#f9fafb] hover:bg-[#f9fafb] border-b border-[#e5e7eb]">
-                  <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">Time</TableHead>
-                  <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">HR</TableHead>
-                  <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">SpO2</TableHead>
-                  <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">RR</TableHead>
-                  <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">Temp</TableHead>
-                  <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">BP</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {mockMeasurements.map((row, idx) => (
-                  <TableRow
-                    key={row.time}
-                    className={cn(
-                      "border-b border-[#e5e7eb]",
-                      idx % 2 === 1 ? "bg-[#fbfbfc]" : "bg-white"
-                    )}
-                  >
-                    <TableCell className="px-6 py-3 text-[13px] text-[#4b5563]">{row.time}</TableCell>
-                    <TableCell className="px-6 py-3 text-[13px] font-semibold" style={{ color: "#22c55e" }}>{row.hr}</TableCell>
-                    <TableCell className="px-6 py-3 text-[13px] font-semibold" style={{ color: "#38bef8" }}>{row.spo2}</TableCell>
-                    <TableCell className="px-6 py-3 text-[13px] font-semibold" style={{ color: "#fbbf24" }}>{row.rr}</TableCell>
-                    <TableCell className="px-6 py-3 text-[13px] font-semibold" style={{ color: "#a78bfb" }}>{row.temp}</TableCell>
-                    <TableCell className="px-6 py-3 text-[13px] font-semibold" style={{ color: "#f87171" }}>{row.bp}</TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="sticky top-0 bg-card z-10">
+                  <TableRow className="bg-muted hover:bg-muted border-b border-border">
+                    <TableHead className="px-6 py-3 text-[12px] font-semibold text-muted-foreground">Time</TableHead>
+                    {trendColumns.map(({ key, label }) => (
+                      <TableHead key={key} className="px-6 py-3 text-[12px] font-semibold text-muted-foreground">{label}</TableHead>
+                    ))}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {mockMeasurements.map((row, idx) => (
+                    <TableRow
+                      key={row.time}
+                      className={cn(
+                        "border-b border-border",
+                        idx % 2 === 1 ? "bg-muted/50" : "bg-card"
+                      )}
+                    >
+                      <TableCell className="px-6 py-3 text-[13px] text-muted-foreground">{row.time}</TableCell>
+                      {trendColumns.map(({ key }) => (
+                        <TableCell
+                          key={key}
+                          className="px-6 py-3 text-[13px] font-semibold"
+                          style={{ color: vitalColorMap[key] }}
+                        >
+                          {row[key]}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>
