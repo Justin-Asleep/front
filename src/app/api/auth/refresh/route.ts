@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from "@/services/cookie-config";
 
 const API_URL = process.env.API_URL || "http://localhost:8000";
 
@@ -28,20 +29,8 @@ export async function POST() {
 
   const { access_token, refresh_token: newRefreshToken } = data.data;
 
-  cookieStore.set("access_token", access_token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax" as const,
-    path: "/",
-    maxAge: 60 * 60 * 8, // 8 hours
-  });
-  cookieStore.set("refresh_token", newRefreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax" as const,
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7, // 7 days
-  });
+  cookieStore.set("access_token", access_token, ACCESS_TOKEN_COOKIE);
+  cookieStore.set("refresh_token", newRefreshToken, REFRESH_TOKEN_COOKIE);
 
   return NextResponse.json({ success: true });
 }

@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { tabs, getActiveTabId } from "@/lib/navigation";
-import { useAuth } from "@/lib/auth";
+import { tabs, getActiveTabId } from "@/config/navigation";
+import { useAuth } from "@/providers/auth";
 
 export function HeaderNav() {
   const pathname = usePathname();

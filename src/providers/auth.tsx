@@ -9,7 +9,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { LoginRequest, User } from "@/types/auth";
-import apiClient, { apiGet, apiPost } from "@/lib/api";
+import apiClient, { apiGet, apiPost } from "@/services/api";
 
 interface AuthContextValue {
   user: User | null;
@@ -26,9 +26,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // mount 시 /api/auth/me 호출 → user state 복원
+  // mount 시 /auth/me → baseURL "/api" 결합 → /api/auth/me 호출
   useEffect(() => {
-    apiGet<User>("/api/auth/me")
+    apiGet<User>("/auth/me")
       .then((u) => setUser(u))
       .catch(() => setUser(null))
       .finally(() => setIsLoading(false));
@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(
     async (email: string, password: string) => {
       const data: LoginRequest = { email, password };
-      const result = await apiPost<User>("/api/auth/login", data);
+      const result = await apiPost<User>("/auth/login", data);
       setUser(result);
       const callbackUrl = new URLSearchParams(window.location.search).get("callbackUrl");
       router.push(callbackUrl || "/admin/bed-status");
@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(async () => {
-    await apiClient.post("/api/auth/logout", {}).catch(() => {});
+    await apiClient.post("/auth/logout", {}).catch(() => {});
     setUser(null);
     router.push("/login");
   }, [router]);
