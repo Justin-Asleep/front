@@ -26,8 +26,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // mount 시 /auth/me → baseURL "/api" 결합 → /api/auth/me 호출
   useEffect(() => {
+    if (window.location.pathname === "/login") {
+      setIsLoading(false);
+      return;
+    }
     apiGet<User>("/auth/me")
       .then((u) => setUser(u))
       .catch(() => setUser(null))

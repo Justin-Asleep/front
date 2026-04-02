@@ -21,6 +21,8 @@ export function PaginationBar({
   onPageChange,
   label = "items",
 }: PaginationBarProps) {
+  if (totalItems === 0) return null
+
   const start = (currentPage - 1) * pageSize
 
   return (

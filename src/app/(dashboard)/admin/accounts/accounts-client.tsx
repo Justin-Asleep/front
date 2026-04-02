@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,23 +22,58 @@ import { AddMemberModal } from "@/components/admin/add-member-modal"
 import { EditMemberModal } from "@/components/admin/edit-member-modal"
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
 import { statusBadgeClass } from "@/helpers/status-badge"
+import { apiGet, apiPost, apiPatch, apiDelete } from "@/services/api"
 
-type Role = "Admin" | "Nurse" | "Doctor"
+// ── Types ────────────────────────────────────────────────────────────────────
+
+interface MemberResponse {
+  id: string
+  hospital_id: string
+  email: string
+  name: string
+  first_name: string
+  last_name: string | null
+  role: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 type Status = "Active" | "Inactive"
 
 export type Account = {
   id: string
   name: string
+  firstName: string
+  lastName?: string
   email: string
-  role: Role
+  role: string
   status: Status
   createdAt: string
 }
 
-const ROLE_FILTERS = ["All", "Admin", "Nurse", "Doctor"] as const
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function capitalize(s: string): string {
+  return s.charAt(0) + s.slice(1).toLowerCase()
+}
+
+function toAccount(m: MemberResponse): Account {
+  return {
+    id: m.id,
+    name: m.name,
+    firstName: m.first_name,
+    lastName: m.last_name ?? undefined,
+    email: m.email,
+    role: capitalize(m.role),
+    status: m.is_active ? "Active" : "Inactive",
+    createdAt: m.created_at.slice(0, 10),
+  }
+}
+
 const PAGE_SIZE = 8
 
-const roleBadgeClass: Record<Role, string> = {
+const roleBadgeClass: Record<string, string> = {
   Admin:  "bg-[#eff6ff] text-[#2563eb] border-0",
   Nurse:  "bg-[#dcfce7] text-[#16a34a] border-0",
   Doctor: "bg-[#ede9fe] text-[#a78bfb] border-0",
@@ -53,8 +88,14 @@ function getInitials(name: string) {
     .toUpperCase()
 }
 
-export function AccountsClient({ initialAccounts }: { initialAccounts: Account[] }) {
-  const [accounts, setAccounts] = useState<Account[]>(initialAccounts)
+// ── Component ────────────────────────────────────────────────────────────────
+
+export function AccountsClient() {
+  const [accounts, setAccounts] = useState<Account[]>([])
+  const [roles, setRoles] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
   const [search, setSearch] = useState("")
   const [selectedRole, setSelectedRole] = useState<string>("All")
   const [currentPage, setCurrentPage] = useState(1)
@@ -62,6 +103,35 @@ export function AccountsClient({ initialAccounts }: { initialAccounts: Account[]
   const [addOpen, setAddOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Account | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Account | null>(null)
+
+  const fetchMembers = useCallback(async () => {
+    try {
+      const [membersRes, rolesRes] = await Promise.all([
+        apiGet<{ items: MemberResponse[]; total: number }>(
+          `/proxy/members?page=1&size=100`
+        ),
+        apiGet<string[]>("/proxy/members/roles"),
+      ])
+      setAccounts(membersRes.items.map(toAccount))
+      setRoles(rolesRes)
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load members")
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchMembers()
+  }, [fetchMembers])
+
+  // ── Filters ──────────────────────────────────────────────────────────────
+
+  const roleFilters = useMemo(
+    () => ["All", ...roles.map((r) => capitalize(r))],
+    [roles]
+  )
 
   const filtered = useMemo(() => {
     return accounts.filter((a) => {
@@ -88,24 +158,67 @@ export function AccountsClient({ initialAccounts }: { initialAccounts: Account[]
     setCurrentPage(1)
   }
 
-  function handleAdd(data: { name: string; email: string; role: Role; status: Status }) {
-    const newAccount: Account = {
-      id: String(Date.now()),
-      ...data,
-      createdAt: new Date().toISOString().slice(0, 10),
+  // ── CRUD handlers ────────────────────────────────────────────────────────
+
+  async function handleAdd(data: { firstName: string; lastName?: string; email: string; role: string; password: string }) {
+    try {
+      await apiPost("/proxy/members", {
+        email: data.email,
+        first_name: data.firstName,
+        last_name: data.lastName ?? null,
+        role: data.role.toUpperCase(),
+        password: data.password,
+      })
+      await fetchMembers()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add member")
     }
-    setAccounts((prev) => [newAccount, ...prev])
   }
 
-  function handleSave(data: Account) {
-    setAccounts((prev) => prev.map((a) => (a.id === data.id ? data : a)))
+  async function handleSave(data: Account) {
+    try {
+      await apiPatch(`/proxy/members/${data.id}`, {
+        first_name: data.firstName,
+        last_name: data.lastName ?? null,
+        role: data.role.toUpperCase(),
+        is_active: data.status === "Active",
+      })
+      await fetchMembers()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update member")
+    }
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!deleteTarget) return
-    setAccounts((prev) => prev.filter((a) => a.id !== deleteTarget.id))
-    setDeleteTarget(null)
+    try {
+      await apiDelete(`/proxy/members/${deleteTarget.id}`)
+      setDeleteTarget(null)
+      await fetchMembers()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete member")
+    }
   }
+
+  // ── Loading / Error states ───────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64 text-[#9ca3af]">
+        Loading...
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64 text-red-500">
+        {error}
+      </div>
+    )
+  }
+
+  // ── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6">
@@ -134,7 +247,7 @@ export function AccountsClient({ initialAccounts }: { initialAccounts: Account[]
           />
         </div>
         <div className="flex gap-2">
-          {ROLE_FILTERS.map((role) => (
+          {roleFilters.map((role) => (
             <button
               key={role}
               onClick={() => handleRoleChange(role)}
@@ -193,7 +306,7 @@ export function AccountsClient({ initialAccounts }: { initialAccounts: Account[]
                     </TableCell>
                     <TableCell className="px-4 py-3 text-[13px] text-[#4b5563]">{account.email}</TableCell>
                     <TableCell className="px-4 py-3">
-                      <Badge className={roleBadgeClass[account.role]}>{account.role}</Badge>
+                      <Badge className={roleBadgeClass[account.role] ?? ""}>{account.role}</Badge>
                     </TableCell>
                     <TableCell className="px-4 py-3">
                       <Badge className={statusBadgeClass[account.status]}>{account.status}</Badge>
@@ -239,6 +352,7 @@ export function AccountsClient({ initialAccounts }: { initialAccounts: Account[]
       <AddMemberModal
         open={addOpen}
         onOpenChange={setAddOpen}
+        roles={roles}
         onAdd={handleAdd}
       />
 
@@ -246,6 +360,7 @@ export function AccountsClient({ initialAccounts }: { initialAccounts: Account[]
         open={editTarget !== null}
         onOpenChange={(open) => { if (!open) setEditTarget(null) }}
         member={editTarget}
+        roles={roles}
         onSave={handleSave}
       />
 

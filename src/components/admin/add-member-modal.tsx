@@ -17,33 +17,50 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-type Role = "Admin" | "Nurse" | "Doctor"
+function capitalize(s: string): string {
+  return s.charAt(0) + s.slice(1).toLowerCase()
+}
 
 interface AddMemberModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onAdd: (data: { name: string; email: string; role: Role; status: "Active" }) => void
+  roles: string[]
+  onAdd: (data: { firstName: string; lastName?: string; email: string; role: string; password: string }) => Promise<void>
 }
 
-export function AddMemberModal({ open, onOpenChange, onAdd }: AddMemberModalProps) {
-  const [name, setName] = useState("")
+export function AddMemberModal({ open, onOpenChange, roles, onAdd }: AddMemberModalProps) {
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
-  const [role, setRole] = useState<Role | "">("")
+  const [role, setRole] = useState("")
+  const [password, setPassword] = useState("")
+  const [submitting, setSubmitting] = useState(false)
 
-  function handleSubmit() {
-    if (!name || !email || !role) return
-    onAdd({ name, email, role, status: "Active" })
-    onOpenChange(false)
-    setName("")
-    setEmail("")
-    setRole("")
+  async function handleSubmit() {
+    if (!firstName || !email || !role || !password) return
+    setSubmitting(true)
+    try {
+      await onAdd({ firstName, lastName: lastName || undefined, email, role, password })
+      onOpenChange(false)
+      setFirstName("")
+      setLastName("")
+      setEmail("")
+      setRole("")
+      setPassword("")
+    } catch {
+      // error handled by parent
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   function handleCancel() {
     onOpenChange(false)
-    setName("")
+    setFirstName("")
+    setLastName("")
     setEmail("")
     setRole("")
+    setPassword("")
   }
 
   return (
@@ -74,14 +91,25 @@ export function AddMemberModal({ open, onOpenChange, onAdd }: AddMemberModalProp
 
         {/* Form */}
         <div className="px-8 py-4 space-y-5">
-          <div className="space-y-1.5">
-            <label className="text-[14px] font-medium text-[#4b5563]">Full Name</label>
-            <Input
-              placeholder="Enter full name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="h-10 border-[#d1d5db] rounded-lg text-[14px]"
-            />
+          <div className="flex gap-4">
+            <div className="flex-1 space-y-1.5">
+              <label className="text-[14px] font-medium text-[#4b5563]">First Name</label>
+              <Input
+                placeholder="Enter first name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="h-10 border-[#d1d5db] rounded-lg text-[14px]"
+              />
+            </div>
+            <div className="flex-1 space-y-1.5">
+              <label className="text-[14px] font-medium text-[#4b5563]">Last Name</label>
+              <Input
+                placeholder="Enter last name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="h-10 border-[#d1d5db] rounded-lg text-[14px]"
+              />
+            </div>
           </div>
 
           <div className="space-y-1.5">
@@ -96,15 +124,28 @@ export function AddMemberModal({ open, onOpenChange, onAdd }: AddMemberModalProp
           </div>
 
           <div className="space-y-1.5">
+            <label className="text-[14px] font-medium text-[#4b5563]">Password</label>
+            <Input
+              type="password"
+              placeholder="Enter password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="h-10 border-[#d1d5db] rounded-lg text-[14px]"
+            />
+          </div>
+
+          <div className="space-y-1.5">
             <label className="text-[14px] font-medium text-[#4b5563]">Role</label>
-            <Select value={role} onValueChange={(v) => setRole(v as Role)}>
+            <Select value={role} onValueChange={(v) => setRole(v ?? "")}>
               <SelectTrigger className="w-full h-10 border-[#d1d5db] rounded-lg text-[14px]">
                 <SelectValue placeholder="Select role..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Admin">Admin</SelectItem>
-                <SelectItem value="Nurse">Nurse</SelectItem>
-                <SelectItem value="Doctor">Doctor</SelectItem>
+                {roles.map((r) => (
+                  <SelectItem key={r} value={capitalize(r)}>
+                    {capitalize(r)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -124,10 +165,10 @@ export function AddMemberModal({ open, onOpenChange, onAdd }: AddMemberModalProp
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!name || !email || !role}
+            disabled={!firstName || !email || !role || !password || submitting}
             className="h-10 w-[160px] bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[14px] font-semibold rounded-lg"
           >
-            Add Member
+            {submitting ? "Adding..." : "Add Member"}
           </Button>
         </div>
       </DialogContent>

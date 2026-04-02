@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "mcp__jina__read_url",
+      "Bash(python3 /Users/justin/.claude/skills/ui-ux-pro-max/scripts/search.py \"healthcare admin dashboard ward room management hierarchy\" --design-system -p \"Vital Monitoring\" -f markdown)",
+      "Bash(python3 /Users/justin/.claude/skills/ui-ux-pro-max/scripts/search.py \"expandable row master-detail navigation shadcn\" --domain ux -n 5)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\(''''scripts'''',{}\\), indent=2\\)\\)\")"
+    ]
+  }
+}

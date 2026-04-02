@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -19,14 +19,19 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 
-type Role = "Admin" | "Nurse" | "Doctor"
 type Status = "Active" | "Inactive"
+
+function capitalize(s: string): string {
+  return s.charAt(0) + s.slice(1).toLowerCase()
+}
 
 interface MemberData {
   id: string
   name: string
+  firstName: string
+  lastName?: string
   email: string
-  role: Role
+  role: string
   status: Status
   createdAt: string
 }
@@ -35,18 +40,36 @@ interface EditMemberModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   member: MemberData | null
+  roles: string[]
   onSave: (data: MemberData) => void
 }
 
-export function EditMemberModal({ open, onOpenChange, member, onSave }: EditMemberModalProps) {
-  const [name, setName] = useState(member?.name ?? "")
-  const [email, setEmail] = useState(member?.email ?? "")
-  const [role, setRole] = useState<Role>(member?.role ?? "Nurse")
+export function EditMemberModal({ open, onOpenChange, member, roles, onSave }: EditMemberModalProps) {
+  const [firstName, setFirstName] = useState(member?.firstName ?? "")
+  const [lastName, setLastName] = useState(member?.lastName ?? "")
+  const email = member?.email ?? ""
+  const [role, setRole] = useState(member?.role ?? "")
   const [active, setActive] = useState(member?.status !== "Inactive")
 
+  useEffect(() => {
+    if (member) {
+      setFirstName(member.firstName)
+      setLastName(member.lastName ?? "")
+      setRole(member.role)
+      setActive(member.status !== "Inactive")
+    }
+  }, [member])
+
   function handleSubmit() {
-    if (!member || !name || !email) return
-    onSave({ ...member, name, email, role, status: active ? "Active" : "Inactive" })
+    if (!member || !firstName) return
+    onSave({
+      ...member,
+      firstName,
+      lastName: lastName || undefined,
+      name: lastName ? `${firstName} ${lastName}` : firstName,
+      role,
+      status: active ? "Active" : "Inactive",
+    })
     onOpenChange(false)
   }
 
@@ -82,13 +105,23 @@ export function EditMemberModal({ open, onOpenChange, member, onSave }: EditMemb
 
         {/* Form */}
         <div className="px-8 py-4 space-y-5">
-          <div className="space-y-1.5">
-            <label className="text-[13px] font-medium text-[#111827]">Full Name</label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="h-10 border-[#d1d5db] rounded-lg text-[14px]"
-            />
+          <div className="flex gap-4">
+            <div className="flex-1 space-y-1.5">
+              <label className="text-[13px] font-medium text-[#111827]">First Name</label>
+              <Input
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="h-10 border-[#d1d5db] rounded-lg text-[14px]"
+              />
+            </div>
+            <div className="flex-1 space-y-1.5">
+              <label className="text-[13px] font-medium text-[#111827]">Last Name</label>
+              <Input
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="h-10 border-[#d1d5db] rounded-lg text-[14px]"
+              />
+            </div>
           </div>
 
           <div className="space-y-1.5">
@@ -96,21 +129,23 @@ export function EditMemberModal({ open, onOpenChange, member, onSave }: EditMemb
             <Input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="h-10 border-[#d1d5db] rounded-lg text-[14px]"
+              readOnly
+              className="h-10 border-[#d1d5db] rounded-lg text-[14px] bg-[#f9fafb] text-[#9ca3af] cursor-not-allowed"
             />
           </div>
 
           <div className="space-y-1.5">
             <label className="text-[13px] font-medium text-[#111827]">Role</label>
-            <Select value={role} onValueChange={(v) => setRole(v as Role)}>
+            <Select value={role} onValueChange={(v) => setRole(v ?? "")}>
               <SelectTrigger className="w-full h-10 border-[#d1d5db] rounded-lg text-[14px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Admin">Admin</SelectItem>
-                <SelectItem value="Nurse">Nurse</SelectItem>
-                <SelectItem value="Doctor">Doctor</SelectItem>
+                {roles.map((r) => (
+                  <SelectItem key={r} value={capitalize(r)}>
+                    {capitalize(r)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -151,7 +186,7 @@ export function EditMemberModal({ open, onOpenChange, member, onSave }: EditMemb
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!name || !email}
+            disabled={!firstName}
             className="h-10 w-[140px] bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[14px] font-semibold rounded-lg"
           >
             Save Changes

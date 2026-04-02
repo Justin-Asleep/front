@@ -52,7 +52,9 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         refreshQueue.forEach(({ reject }) => reject(refreshError));
         refreshQueue.length = 0;
-        window.location.href = "/login";
+        if (window.location.pathname !== "/login") {
+          window.location.href = "/login";
+        }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
@@ -91,6 +93,15 @@ export async function apiPut<T>(
   config?: AxiosRequestConfig
 ): Promise<T> {
   const res = await apiClient.put<APIResponse<T>>(url, data, config);
+  return res.data.data as T;
+}
+
+export async function apiPatch<T>(
+  url: string,
+  data?: unknown,
+  config?: AxiosRequestConfig
+): Promise<T> {
+  const res = await apiClient.patch<APIResponse<T>>(url, data, config);
   return res.data.data as T;
 }
 
