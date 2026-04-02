@@ -10,6 +10,7 @@ import { AddRoomModal } from "@/components/admin/add-room-modal"
 import { EditRoomModal } from "@/components/admin/edit-room-modal"
 import { EditWardModal } from "@/components/admin/edit-ward-modal"
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
+import { OccupancyBar } from "@/components/ui/occupancy-bar"
 
 type WardStatus = "Active" | "Inactive"
 type RoomType = "SINGLE" | "QUAD" | "HEX"
@@ -81,24 +82,6 @@ const statusBadgeClass: Record<WardStatus, string> = {
   Inactive: "bg-[#f3f4f6] text-[#9ca3af] border-0",
 }
 
-function OccupancyBar({ value }: { value: number }) {
-  const color =
-    value >= 90 ? "#dc2626" :
-    value >= 71 ? "#f59e0b" :
-    "#16a34a"
-
-  return (
-    <div className="flex items-center gap-2">
-      <div className="w-[100px] h-2 rounded-full bg-[#e5e7eb] overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all"
-          style={{ width: `${value}%`, backgroundColor: color }}
-        />
-      </div>
-      <span className="text-[12px] font-medium text-[#4b5563]">{value}%</span>
-    </div>
-  )
-}
 
 export default function WardDetailPage({
   params,
@@ -246,15 +229,6 @@ export default function WardDetailPage({
                 >
                   {room.available} available
                 </span>
-              </div>
-              <div className="w-full h-1.5 rounded-full bg-[#f3f4f6] overflow-hidden">
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${(room.occupied / room.beds) * 100}%`,
-                    backgroundColor: `rgba(37, 99, 235, ${0.3 + (room.occupied / room.beds) * 0.7})`,
-                  }}
-                />
               </div>
               <div className="flex gap-2">
                 <Button

@@ -13,10 +13,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Pencil } from "lucide-react"
+import { Pencil, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AddWardModal } from "@/components/admin/add-ward-modal"
 import { EditWardModal } from "@/components/admin/edit-ward-modal"
+import { OccupancyBar } from "@/components/ui/occupancy-bar"
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
 
 type WardStatus = "Active" | "Inactive"
 
@@ -44,30 +46,13 @@ const statusBadgeClass: Record<WardStatus, string> = {
   Inactive: "bg-[#f3f4f6] text-[#9ca3af] border-0",
 }
 
-function OccupancyBar({ value }: { value: number }) {
-  const color =
-    value >= 90 ? "#dc2626" :
-    value >= 71 ? "#f59e0b" :
-    "#16a34a"
-
-  return (
-    <div className="flex items-center gap-2">
-      <div className="w-[100px] h-2 rounded-full bg-[#e5e7eb] overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all"
-          style={{ width: `${value}%`, backgroundColor: color }}
-        />
-      </div>
-      <span className="text-[12px] font-medium text-[#4b5563]">{value}%</span>
-    </div>
-  )
-}
 
 export default function WardsPage() {
   const router = useRouter()
   const [wards, setWards] = useState<Ward[]>(initialWards)
   const [addOpen, setAddOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Ward | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Ward | null>(null)
 
   function handleAdd(data: { name: string; floor: string }) {
     const newWard: Ward = {
@@ -145,14 +130,24 @@ export default function WardsPage() {
                     <Badge className={statusBadgeClass[ward.status]}>{ward.status}</Badge>
                   </TableCell>
                   <TableCell className="px-6 py-3">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-8 text-[#2563eb] hover:text-[#1d4ed8]"
-                      onClick={() => router.push('/admin/wards/' + ward.id)}
-                    >
-                      <Pencil className="size-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 text-[#2563eb] hover:text-[#1d4ed8]"
+                        onClick={() => router.push('/admin/wards/' + ward.id)}
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 text-[#dc2626] hover:text-[#b91c1c]"
+                        onClick={() => setDeleteTarget(ward)}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -172,6 +167,19 @@ export default function WardsPage() {
         onOpenChange={(open) => { if (!open) setEditTarget(null) }}
         ward={editTargetForModal}
         onSave={handleSave}
+      />
+
+      <ConfirmDeleteDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+        title="Delete Ward"
+        targetName={deleteTarget?.name ?? ""}
+        onConfirm={() => {
+          if (deleteTarget) {
+            setWards((prev) => prev.filter((w) => w.id !== deleteTarget.id))
+            setDeleteTarget(null)
+          }
+        }}
       />
     </div>
   )

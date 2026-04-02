@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { tabs, getActiveTabId } from "@/lib/navigation";
+import { useAuth } from "@/lib/auth";
 
 export function HeaderNav() {
   const pathname = usePathname();
   const activeTabId = getActiveTabId(pathname);
+  const { user, logout } = useAuth();
 
   return (
     <header className="h-16 bg-[#2563EB] flex items-center px-6 shrink-0">
@@ -39,10 +42,17 @@ export function HeaderNav() {
       </nav>
 
       <div className="flex items-center gap-3 shrink-0">
-        <span className="text-sm text-blue-100">Admin</span>
+        <span className="text-sm text-blue-100">{user?.role ?? "..."}</span>
         <div className="size-8 rounded-full bg-white/20 flex items-center justify-center text-white text-sm font-medium">
-          A
+          {user?.role?.[0] ?? "?"}
         </div>
+        <button
+          onClick={() => logout()}
+          className="flex items-center justify-center size-8 rounded-full hover:bg-white/20 text-white/70 hover:text-white transition-colors"
+          aria-label="Logout"
+        >
+          <LogOut className="size-4" />
+        </button>
       </div>
     </header>
   );

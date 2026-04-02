@@ -3,10 +3,29 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useAuth } from "@/lib/auth"
 
 export default function LoginPage() {
+  const { login } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setIsLoading(true)
+    try {
+      await login(email, password)
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "로그인에 실패했습니다."
+      setError(msg)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   return (
     <div className="min-h-screen flex">
@@ -50,7 +69,7 @@ export default function LoginPage() {
           <h2 className="text-[28px] font-bold text-center text-[#111827] mb-2">Login</h2>
           <p className="text-sm text-[#4b5563] text-center mb-8">Sign in to your admin account</p>
 
-          <div className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email */}
             <div className="space-y-2">
               <label className="text-[13px] font-medium text-[#111827]">Email</label>
@@ -60,6 +79,7 @@ export default function LoginPage() {
                 className="h-[44px] border-[#d1d5db] text-sm"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                required
               />
             </div>
 
@@ -72,18 +92,28 @@ export default function LoginPage() {
                 className="h-[44px] border-[#d1d5db] text-sm"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                required
               />
             </div>
 
+            {/* Error message */}
+            {error && (
+              <p className="text-[13px] text-red-500 text-center">{error}</p>
+            )}
+
             {/* Sign In Button */}
-            <Button className="w-full h-[44px] bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[15px] font-semibold rounded-lg mt-1">
-              Sign In
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-[44px] bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[15px] font-semibold rounded-lg mt-1"
+            >
+              {isLoading ? "Signing in..." : "Sign In"}
             </Button>
 
             <p className="text-[13px] text-[#2563eb] text-center cursor-pointer hover:underline">
               Forgot your password?
             </p>
-          </div>
+          </form>
         </div>
 
         {/* Footer */}
