@@ -1,9 +1,8 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
   Table,
   TableBody,
@@ -14,87 +13,147 @@ import {
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
 import { PaginationBar } from "@/components/ui/pagination-bar"
+import { SearchableSelect } from "@/components/ui/searchable-select"
+import { apiGet } from "@/services/api"
+import { toast } from "sonner"
 
-type EventType = "Heartbeat" | "Error" | "Login" | "Disconnect"
-type LogStatus = "Success" | "Warning" | "Failed"
-
-type DeviceLog = {
+interface DeviceLog {
   id: string
-  timestamp: string
-  device: string
-  eventType: EventType
-  status: LogStatus
-  details: string
+  tablet_id: string
+  serial_number: string
+  bed_label: string | null
+  event_type: string
+  status: string
+  device_status: Record<string, unknown> | null
+  created_at: string
 }
 
-const mockLogs: DeviceLog[] = [
-  { id: "1",  timestamp: "14:32:01", device: "TAB-001", eventType: "Heartbeat",  status: "Success", details: "All sensors OK, battery 87%" },
-  { id: "2",  timestamp: "14:31:45", device: "TAB-003", eventType: "Error",      status: "Warning", details: "Temp sensor disconnected" },
-  { id: "3",  timestamp: "14:30:12", device: "TAB-005", eventType: "Heartbeat",  status: "Success", details: "All sensors OK, battery 62%" },
-  { id: "4",  timestamp: "14:28:55", device: "TAB-007", eventType: "Login",      status: "Success", details: "Token issued, bed assigned" },
-  { id: "5",  timestamp: "14:25:33", device: "TAB-004", eventType: "Disconnect", status: "Failed",  details: "No response after 3 retries" },
-  { id: "6",  timestamp: "14:22:10", device: "TAB-002", eventType: "Heartbeat",  status: "Success", details: "All sensors OK, battery 91%" },
-  { id: "7",  timestamp: "14:18:47", device: "TAB-006", eventType: "Error",      status: "Failed",  details: "Auth token expired" },
-  { id: "8",  timestamp: "14:15:02", device: "TAB-009", eventType: "Login",      status: "Success", details: "Token issued, bed assigned" },
-  { id: "9",  timestamp: "14:10:29", device: "TAB-011", eventType: "Disconnect", status: "Warning", details: "SpO2 signal lost" },
-  { id: "10", timestamp: "14:05:18", device: "TAB-001", eventType: "Heartbeat",  status: "Success", details: "All sensors OK, battery 88%" },
-  { id: "11", timestamp: "13:58:44", device: "TAB-003", eventType: "Heartbeat",  status: "Success", details: "All sensors OK, battery 74%" },
-  { id: "12", timestamp: "13:52:11", device: "TAB-005", eventType: "Login",      status: "Success", details: "Token issued, bed assigned" },
-  { id: "13", timestamp: "13:45:30", device: "TAB-002", eventType: "Heartbeat",  status: "Success", details: "All sensors OK, battery 93%" },
-  { id: "14", timestamp: "13:40:05", device: "TAB-009", eventType: "Error",      status: "Warning", details: "BP sensor intermittent" },
-  { id: "15", timestamp: "13:35:22", device: "TAB-007", eventType: "Heartbeat",  status: "Success", details: "All sensors OK, battery 55%" },
-  { id: "16", timestamp: "13:30:18", device: "TAB-004", eventType: "Error",      status: "Failed",  details: "Connection timeout" },
-  { id: "17", timestamp: "13:25:44", device: "TAB-011", eventType: "Heartbeat",  status: "Success", details: "All sensors OK, battery 81%" },
-  { id: "18", timestamp: "13:20:10", device: "TAB-006", eventType: "Disconnect", status: "Failed",  details: "Network unreachable" },
-  { id: "19", timestamp: "13:15:33", device: "TAB-001", eventType: "Heartbeat",  status: "Success", details: "All sensors OK, battery 89%" },
-  { id: "20", timestamp: "13:10:05", device: "TAB-002", eventType: "Login",      status: "Success", details: "Token issued, bed assigned" },
-]
+interface PaginatedData<T> {
+  items: T[]
+  total: number
+  page: number
+  size: number
+  pages: number
+}
 
-const EVENT_FILTERS = ["All", "Heartbeat", "Login", "Error"] as const
+interface TabletOption {
+  id: string
+  serial_number: string
+  bed_label: string | null
+}
+
+const eventTypeBadgeClass: Record<string, string> = {
+  HEARTBEAT:  "bg-[#dcfce7] text-[#16a34a] border-0",
+  LOGIN:      "bg-[#eff6ff] text-[#2563eb] border-0",
+  ERROR:      "bg-[#feeded] text-[#da3535] border-0",
+  DISCONNECT: "bg-[#fff4ea] text-[#f4801e] border-0",
+}
+
+const statusBadgeClass: Record<string, string> = {
+  SUCCESS: "bg-[#dcfce7] text-[#16a34a] border-0",
+  WARNING: "bg-[#fff4ea] text-[#f4801e] border-0",
+  FAILED:  "bg-[#feeded] text-[#da3535] border-0",
+}
+
 const PAGE_SIZE = 10
 
-const eventTypeBadgeClass: Record<EventType, string> = {
-  Heartbeat:  "bg-[#dcfce7] text-[#16a34a] border-0",
-  Login:      "bg-[#eff6ff] text-[#2563eb] border-0",
-  Error:      "bg-[#feeded] text-[#da3535] border-0",
-  Disconnect: "bg-[#fff4ea] text-[#f4801e] border-0",
-}
-
-const statusBadgeClass: Record<LogStatus, string> = {
-  Success: "bg-[#dcfce7] text-[#16a34a] border-0",
-  Warning: "bg-[#fff4ea] text-[#f4801e] border-0",
-  Failed:  "bg-[#feeded] text-[#da3535] border-0",
-}
-
-const DEVICES = ["All Devices", "TAB-001", "TAB-002", "TAB-003", "TAB-004", "TAB-005", "TAB-006", "TAB-007", "TAB-009", "TAB-011"]
-
 export function DeviceLogClient() {
-  const [selectedDevice, setSelectedDevice] = useState("All Devices")
-  const [selectedEvent, setSelectedEvent] = useState<string>("All")
+  const [logs, setLogs] = useState<DeviceLog[]>([])
+  const [total, setTotal] = useState(0)
+  const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
 
-  const filtered = useMemo(() => {
-    return mockLogs.filter((log) => {
-      const matchesDevice = selectedDevice === "All Devices" || log.device === selectedDevice
-      const matchesEvent = selectedEvent === "All" || log.eventType === selectedEvent
-      return matchesDevice && matchesEvent
-    })
-  }, [selectedDevice, selectedEvent])
+  const [tablets, setTablets] = useState<TabletOption[]>([])
+  const [eventTypes, setEventTypes] = useState<string[]>([])
+  const [selectedTablet, setSelectedTablet] = useState("")
+  const [selectedEvent, setSelectedEvent] = useState("")
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
-  const start = (currentPage - 1) * PAGE_SIZE
-  const paginated = filtered.slice(start, start + PAGE_SIZE)
-  const totalEntries = filtered.length
+  // Load tablets + event types on mount
+  useEffect(() => {
+    async function loadFilters() {
+      try {
+        const [tabletsData, eventTypesData] = await Promise.all([
+          apiGet<PaginatedData<TabletOption>>("/proxy/tablets?page=1&size=100"),
+          apiGet<string[]>("/proxy/tablet-logs/event-types"),
+        ])
+        setTablets(tabletsData.items)
+        setEventTypes(eventTypesData)
+      } catch {
+        console.error("Failed to load filters")
+      }
+    }
+    loadFilters()
+  }, [])
+
+  const fetchLogs = useCallback(async (page: number, tabletId: string, eventType: string) => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams({ page: String(page), size: String(PAGE_SIZE) })
+      if (tabletId) params.set("tablet_id", tabletId)
+      if (eventType) params.set("event_type", eventType)
+      const data = await apiGet<PaginatedData<DeviceLog>>(`/proxy/tablet-logs?${params}`)
+      setLogs(data.items)
+      setTotal(data.total)
+    } catch {
+      toast.error("Failed to load device logs")
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchLogs(currentPage, selectedTablet, selectedEvent)
+  }, [currentPage, selectedTablet, selectedEvent, fetchLogs])
+
+  const totalPages = Math.ceil(total / PAGE_SIZE)
+
+  function handleTabletChange(value: string) {
+    setSelectedTablet(value)
+    setCurrentPage(1)
+  }
 
   function handleEventChange(event: string) {
-    setSelectedEvent(event)
+    setSelectedEvent(event === selectedEvent ? "" : event)
     setCurrentPage(1)
   }
 
-  function handleDeviceChange(device: string) {
-    setSelectedDevice(device)
-    setCurrentPage(1)
+  function formatTimestamp(iso: string) {
+    const d = new Date(iso)
+    return d.toLocaleString("en-US", {
+      month: "short", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit",
+      hour12: false,
+    })
   }
+
+  function formatDetails(log: DeviceLog): string {
+    if (!log.device_status) return "-"
+    const ds = log.device_status as Record<string, Record<string, unknown>>
+    const parts: string[] = []
+    if (ds.tablet) {
+      const battery = ds.tablet.battery_level
+      if (battery !== undefined) parts.push(`Battery ${battery}%`)
+    }
+    for (const sensor of ["ecg", "spo2", "temp"]) {
+      const s = ds[sensor] as Record<string, unknown> | undefined
+      if (s) {
+        if (s.connected === false) parts.push(`${sensor.toUpperCase()} disconnected`)
+        else if (s.connected === true) parts.push(`${sensor.toUpperCase()} OK`)
+      }
+    }
+    return parts.length > 0 ? parts.join(", ") : "-"
+  }
+
+  // Device select options: serial (bed_label)
+  const deviceOptions = [
+    { value: "", label: "All Devices" },
+    ...tablets.map((t) => ({
+      value: t.id,
+      label: t.bed_label
+        ? `${t.serial_number} (${t.bed_label})`
+        : `${t.serial_number} (Unassigned)`,
+    })),
+  ]
 
   return (
     <div className="space-y-6">
@@ -103,47 +162,38 @@ export function DeviceLogClient() {
         <p className="text-sm text-[#4b5563]">Audit trail of device events and heartbeat activity</p>
       </div>
 
-      {/* Search + Filters */}
+      {/* Filters */}
       <div className="flex items-center gap-4">
-        <select
-          value={selectedDevice}
-          onChange={(e) => handleDeviceChange(e.target.value)}
-          className="h-9 px-3 rounded-lg border border-[#d1d5db] bg-white text-[13px] text-[#4b5563] w-[200px]"
-        >
-          {DEVICES.map((d) => (
-            <option key={d} value={d}>{d}</option>
-          ))}
-        </select>
-
-        <div className="h-9 px-3 rounded-lg border border-[#d1d5db] bg-white text-[13px] text-[#4b5563] flex items-center w-[160px]">
-          From: 2026-03-20
-        </div>
-        <div className="h-9 px-3 rounded-lg border border-[#d1d5db] bg-white text-[13px] text-[#4b5563] flex items-center w-[160px]">
-          To: 2026-03-27
+        <div className="w-[280px]">
+          <SearchableSelect
+            value={selectedTablet}
+            onValueChange={handleTabletChange}
+            options={deviceOptions}
+            placeholder="All Devices"
+            className="h-9 border-[#d1d5db] text-[13px]"
+          />
         </div>
 
         <div className="flex gap-2">
-          {EVENT_FILTERS.map((event) => (
-            <button
-              key={event}
-              onClick={() => handleEventChange(event)}
-              className={cn(
-                "px-3 py-1 rounded-full text-xs font-medium transition-colors",
-                selectedEvent === event
-                  ? "bg-[#2563eb] text-white"
-                  : "bg-white border border-[#d1d5db] text-[#4b5563] hover:bg-[#f9fafb]"
-              )}
-            >
-              {event}
-            </button>
-          ))}
+          {["All", ...eventTypes].map((event) => {
+            const isAll = event === "All"
+            const isActive = isAll ? selectedEvent === "" : selectedEvent === event
+            return (
+              <button
+                key={event}
+                onClick={() => handleEventChange(isAll ? "" : event)}
+                className={cn(
+                  "px-3 py-1 rounded-full text-xs font-medium transition-colors",
+                  isActive
+                    ? "bg-[#2563eb] text-white"
+                    : "bg-white border border-[#d1d5db] text-[#4b5563] hover:bg-[#f9fafb]"
+                )}
+              >
+                {isAll ? "All" : event.charAt(0) + event.slice(1).toLowerCase()}
+              </button>
+            )
+          })}
         </div>
-
-        <div className="flex-1" />
-
-        <Button variant="outline" size="sm" className="h-9 text-xs font-medium text-[#4b5563] border-[#d1d5db]">
-          Export CSV
-        </Button>
       </div>
 
       {/* Log Table */}
@@ -160,14 +210,20 @@ export function DeviceLogClient() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginated.length === 0 ? (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="px-4 py-12 text-center text-[#9ca3af]">
+                    Loading...
+                  </TableCell>
+                </TableRow>
+              ) : logs.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="px-4 py-12 text-center text-[#9ca3af]">
                     No log entries found
                   </TableCell>
                 </TableRow>
               ) : (
-                paginated.map((log, idx) => (
+                logs.map((log, idx) => (
                   <TableRow
                     key={log.id}
                     className={cn(
@@ -175,15 +231,30 @@ export function DeviceLogClient() {
                       idx % 2 === 1 ? "bg-[#fcfcfe]" : "bg-white"
                     )}
                   >
-                    <TableCell className="px-6 py-3 text-xs text-[#4b5563]">{log.timestamp}</TableCell>
-                    <TableCell className="px-4 py-3 font-medium text-[13px] text-[#111827]">{log.device}</TableCell>
-                    <TableCell className="px-4 py-3">
-                      <Badge className={eventTypeBadgeClass[log.eventType]}>{log.eventType}</Badge>
+                    <TableCell className="px-6 py-3 text-xs text-[#4b5563]">
+                      {formatTimestamp(log.created_at)}
                     </TableCell>
                     <TableCell className="px-4 py-3">
-                      <Badge className={statusBadgeClass[log.status]}>{log.status}</Badge>
+                      <div>
+                        <span className="font-medium text-[13px] text-[#111827]">{log.serial_number}</span>
+                        {log.bed_label && (
+                          <span className="text-[11px] text-[#9ca3af] ml-1.5">({log.bed_label})</span>
+                        )}
+                      </div>
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-xs text-[#4b5563]">{log.details}</TableCell>
+                    <TableCell className="px-4 py-3">
+                      <Badge className={eventTypeBadgeClass[log.event_type] ?? "bg-[#f3f4f6] text-[#4b5563] border-0"}>
+                        {log.event_type.charAt(0) + log.event_type.slice(1).toLowerCase()}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      <Badge className={statusBadgeClass[log.status] ?? "bg-[#f3f4f6] text-[#4b5563] border-0"}>
+                        {log.status.charAt(0) + log.status.slice(1).toLowerCase()}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-xs text-[#4b5563]">
+                      {formatDetails(log)}
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -193,7 +264,7 @@ export function DeviceLogClient() {
           <PaginationBar
             currentPage={currentPage}
             totalPages={totalPages}
-            totalItems={totalEntries}
+            totalItems={total}
             pageSize={PAGE_SIZE}
             onPageChange={setCurrentPage}
             label="entries"
