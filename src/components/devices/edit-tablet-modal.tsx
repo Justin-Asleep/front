@@ -8,10 +8,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { SearchableSelect } from "@/components/ui/searchable-select"
 import { cn } from "@/lib/utils"
 import { Switch } from "@/components/ui/switch"
+import { Copy, RefreshCw } from "lucide-react"
+import { toast } from "sonner"
 
 interface BedOption {
   id: string
@@ -32,72 +33,148 @@ type Props = {
   onOpenChange: (open: boolean) => void
   tablet: TabletData | null
   beds: BedOption[]
-  onSave?: (data: { id: string; bedId: string | null; isActive: boolean; deviceSecret: string }) => void
+  onSave?: (data: { id: string; bedId: string | null; isActive: boolean; resetSecret: boolean }) => Promise<{ device_secret?: string | null } | undefined>
 }
 
 export function EditTabletModal({ open, onOpenChange, tablet, beds, onSave }: Props) {
   const [bedId, setBedId] = useState(tablet?.bed_id ?? "")
   const [active, setActive] = useState(tablet?.is_active ?? true)
-  const [newSecret, setNewSecret] = useState("")
+  const [resetSecret, setResetSecret] = useState(false)
+  const [newSecret, setNewSecret] = useState<string | null>(null)
 
   useEffect(() => {
     if (tablet) {
       setBedId(tablet.bed_id ?? "")
       setActive(tablet.is_active)
-      setNewSecret("")
+      setResetSecret(false)
+      setNewSecret(null)
     }
   }, [tablet])
 
-  function handleSave() {
+  async function handleSave() {
     if (!tablet) return
-    onSave?.({
+    const result = await onSave?.({
       id: tablet.id,
       bedId: bedId || null,
       isActive: active,
-      deviceSecret: newSecret,
+      resetSecret,
     })
+    if (result?.device_secret) {
+      setNewSecret(result.device_secret)
+    }
   }
 
-  function handleCancel() {
+  function handleClose() {
+    setNewSecret(null)
+    setResetSecret(false)
     onOpenChange(false)
+  }
+
+  function copyToClipboard(text: string, label: string) {
+    navigator.clipboard.writeText(text)
+    toast.success(`${label} copied`)
+  }
+
+  // Show new secret after reset
+  if (newSecret) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent
+          className="w-[520px] max-w-[520px] rounded-2xl p-0 gap-0 shadow-[0px_8px_24px_0px_rgba(0,0,0,0.15)]"
+          showCloseButton={false}
+        >
+          <DialogHeader className="px-8 pt-7 pb-0 gap-1">
+            <div className="flex items-start justify-between">
+              <div>
+                <DialogTitle className="text-[20px] font-bold text-[#111827]">
+                  Secret Reset Complete
+                </DialogTitle>
+                <p className="text-[14px] text-[#9ca3af] mt-1">
+                  New device secret for {tablet?.serial_number}
+                </p>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="h-px bg-[#e5e7eb] mx-8 mt-5" />
+
+          <div className="px-8 py-5 space-y-5">
+            <div className="space-y-1.5">
+              <label className="text-[13px] font-medium text-[#9ca3af]">New Device Secret</label>
+              <div className="flex items-center gap-2 min-h-10 bg-[#f9fafb] rounded-lg px-3.5 py-2">
+                <span className="flex-1 text-[13px] font-mono font-medium text-[#111827] break-all">{newSecret}</span>
+                <button onClick={() => copyToClipboard(newSecret, "Secret")} className="text-[#9ca3af] hover:text-[#4b5563] shrink-0">
+                  <Copy className="size-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2 bg-[#fffbeb] rounded-lg px-3 py-2.5">
+              <div className="mt-0.5 size-2 rounded-full bg-[#ca8a04] shrink-0" />
+              <div>
+                <p className="text-[12px] font-medium text-[#92400e]">
+                  This is the only time the new secret will be shown.
+                </p>
+                <p className="text-[11px] text-[#b45309]">
+                  Token: <code className="bg-[#fef3c7] px-1 rounded break-all">{tablet?.serial_number}:{newSecret}</code>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="h-px bg-[#e5e7eb] mx-8" />
+
+          <div className="px-8 py-4 flex justify-end gap-2">
+            <Button
+              onClick={() => copyToClipboard(`${tablet?.serial_number}:${newSecret}`, "Token")}
+              variant="outline"
+              className="h-10 w-[120px] border-[#d1d5db] text-[#4b5563] font-medium text-[14px] rounded-lg"
+            >
+              Copy Token
+            </Button>
+            <Button
+              onClick={handleClose}
+              className="h-10 w-[100px] bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-semibold text-[14px] rounded-lg"
+            >
+              Done
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )
   }
 
   return (
     <Dialog key={tablet?.id} open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-[520px] p-0 gap-0 rounded-2xl overflow-hidden"
+        className="w-[520px] max-w-[520px] rounded-2xl p-0 gap-0 shadow-[0px_8px_24px_0px_rgba(0,0,0,0.15)]"
         showCloseButton={false}
       >
-        {/* Header */}
-        <div className="px-8 pt-7 pb-0">
+        <DialogHeader className="px-8 pt-7 pb-0 gap-1">
           <div className="flex items-start justify-between">
             <div>
-              <DialogHeader>
-                <DialogTitle className="text-[20px] font-bold text-[#111827]">
-                  Edit Tablet
-                </DialogTitle>
-              </DialogHeader>
+              <DialogTitle className="text-[20px] font-bold text-[#111827]">
+                Edit Tablet
+              </DialogTitle>
               <p className="text-[14px] text-[#9ca3af] mt-1">
                 Update tablet device settings
               </p>
             </div>
             <button
-              onClick={handleCancel}
-              className="text-[#9ca3af] text-[16px] hover:text-[#6b7280] leading-none mt-1"
+              onClick={handleClose}
+              className="text-[#9ca3af] text-[16px] leading-none hover:text-[#6b7280] mt-0.5"
             >
-              ✕
+              x
             </button>
           </div>
-          <div className="border-t border-[#e5e7eb] mt-5" />
-        </div>
+        </DialogHeader>
 
-        {/* Body */}
-        <div className="px-8 pt-5 pb-5 flex flex-col gap-4">
+        <div className="h-px bg-[#e5e7eb] mx-8 mt-5" />
+
+        <div className="px-8 py-5 space-y-5">
           {/* Serial Number — read only */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-medium text-[#9ca3af]">
-              Serial Number
-            </label>
+          <div className="space-y-1.5">
+            <label className="text-[13px] font-medium text-[#9ca3af]">Serial Number</label>
             <div className="h-10 bg-[#f9fafb] rounded-lg flex items-center px-3.5">
               <span className="text-[14px] font-medium text-[#4b5563]">
                 {tablet?.serial_number ?? ""}
@@ -106,10 +183,8 @@ export function EditTabletModal({ open, onOpenChange, tablet, beds, onSave }: Pr
           </div>
 
           {/* Assign to Bed */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-medium text-[#111827]">
-              Assign to Bed
-            </label>
+          <div className="space-y-1.5">
+            <label className="text-[13px] font-medium text-[#111827]">Assign to Bed</label>
             <SearchableSelect
               value={bedId}
               onValueChange={setBedId}
@@ -145,30 +220,48 @@ export function EditTabletModal({ open, onOpenChange, tablet, beds, onSave }: Pr
             </div>
           </div>
 
-          <div className="border-t border-[#e5e7eb]" />
+          <div className="h-px bg-[#e5e7eb]" />
 
           {/* Reset Device Secret */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-medium text-[#111827]">
-              Reset Device Secret
-            </label>
-            <Input
-              type="password"
-              value={newSecret}
-              onChange={(e) => setNewSecret(e.target.value)}
-              placeholder="Leave blank to keep current secret"
-              className="h-10 border-[#d1d5db] rounded-lg text-[14px]"
-            />
+          <div className="space-y-1.5">
+            <label className="text-[13px] font-medium text-[#111827]">Device Secret</label>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setResetSecret(!resetSecret)}
+                className={cn(
+                  "h-9 px-3 text-[13px] font-medium rounded-lg gap-1.5",
+                  resetSecret
+                    ? "border-[#fca5a5] text-[#dc2626] bg-[#fef2f2]"
+                    : "border-[#d1d5db] text-[#4b5563]"
+                )}
+              >
+                <RefreshCw className="size-3.5" />
+                {resetSecret ? "Will reset on save" : "Reset Secret"}
+              </Button>
+              {resetSecret && (
+                <button
+                  onClick={() => setResetSecret(false)}
+                  className="text-[12px] text-[#9ca3af] hover:text-[#4b5563] underline"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+            {resetSecret && (
+              <p className="text-[11px] text-[#dc2626]">
+                A new secret will be auto-generated and shown once after saving.
+              </p>
+            )}
           </div>
         </div>
 
         <div className="h-px bg-[#e5e7eb] mx-8" />
 
-        {/* Footer */}
         <div className="px-8 py-4 flex justify-end gap-2">
           <Button
             variant="outline"
-            onClick={handleCancel}
+            onClick={handleClose}
             className="h-10 w-[100px] border-[#d1d5db] text-[#4b5563] font-medium text-[14px] rounded-lg"
           >
             Cancel

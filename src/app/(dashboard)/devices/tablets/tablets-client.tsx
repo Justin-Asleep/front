@@ -150,19 +150,22 @@ export function TabletsClient() {
     }
   }
 
-  async function handleEdit(data: { id: string; bedId: string | null; isActive: boolean; deviceSecret: string }) {
+  async function handleEdit(data: { id: string; bedId: string | null; isActive: boolean; resetSecret: boolean }) {
     try {
-      await apiPatch(`/proxy/tablets/${data.id}`, {
-        bed_id: data.bedId,
-        is_active: data.isActive,
-        ...(data.deviceSecret ? { device_secret: data.deviceSecret } : {}),
-      })
+      const result = await apiPatch<{ device_secret?: string | null }>(
+        `/proxy/tablets/${data.id}`, {
+          bed_id: data.bedId,
+          is_active: data.isActive,
+          reset_secret: data.resetSecret || undefined,
+        }
+      )
       toast.success("Tablet updated")
-      setEditOpen(false)
       fetchTablets(currentPage)
+      return result
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } }
       toast.error(error.response?.data?.message ?? "Failed to update tablet")
+      return undefined
     }
   }
 
