@@ -9,13 +9,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { SearchableSelect } from "@/components/ui/searchable-select"
 import { cn } from "@/lib/utils"
 import { Switch } from "@/components/ui/switch"
 
@@ -116,18 +110,16 @@ export function EditTabletModal({ open, onOpenChange, tablet, beds, onSave }: Pr
             <label className="text-[13px] font-medium text-[#111827]">
               Assign to Bed
             </label>
-            <Select value={bedId} onValueChange={(v) => setBedId(v ?? "")}>
-              <SelectTrigger className="h-10 w-full border-[#d1d5db] rounded-lg text-[14px]">
-                <SelectValue placeholder="Select bed..." />
-              </SelectTrigger>
-              <SelectContent>
-                {beds.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>
-                    {b.ward_name} / {b.room_name} / {b.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={bedId}
+              onValueChange={setBedId}
+              options={beds.map((b) => ({
+                value: b.id,
+                label: `${b.ward_name} / ${b.room_name} / ${b.label}`,
+              }))}
+              placeholder="Select bed..."
+              className="border-[#d1d5db] text-[14px]"
+            />
           </div>
 
           {/* Status toggle */}
