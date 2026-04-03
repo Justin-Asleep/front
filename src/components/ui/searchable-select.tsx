@@ -35,6 +35,8 @@ export function SearchableSelect({
       onValueChange={(val) => {
         if (val) onValueChange((val as SearchableSelectOption).value)
       }}
+      items={options}
+      itemToStringLabel={(item) => (item as SearchableSelectOption).label}
       disabled={disabled}
     >
       <Combobox.Trigger
@@ -70,9 +72,8 @@ export function SearchableSelect({
             </div>
 
             <Combobox.List className="max-h-[200px] overflow-y-auto p-1 scroll-my-1">
-              {options.map((option) => (
+              {(option: SearchableSelectOption) => (
                 <Combobox.Item
-                  key={option.value}
                   value={option}
                   className="relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50"
                 >
@@ -87,7 +88,7 @@ export function SearchableSelect({
                     <CheckIcon className="size-4" />
                   </Combobox.ItemIndicator>
                 </Combobox.Item>
-              ))}
+              )}
             </Combobox.List>
 
             <Combobox.Empty className="py-4 text-center text-sm text-muted-foreground">
