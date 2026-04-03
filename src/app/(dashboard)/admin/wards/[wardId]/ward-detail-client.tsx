@@ -148,8 +148,14 @@ export function WardDetailClient({ wardId }: { wardId: string }) {
       await apiDelete(`/proxy/wards/rooms/${deleteTarget.id}`)
       setDeleteTarget(null)
       await fetchData()
-    } catch (err) {
-      console.error("Failed to delete room:", err)
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error_code?: string; message?: string } } }
+      if (error.response?.data?.error_code === "ACTIVE_ENCOUNTER_EXISTS") {
+        toast.error(error.response.data.message ?? "Cannot delete room: beds have active encounters")
+      } else {
+        toast.error("Failed to delete room")
+      }
+      setDeleteTarget(null)
     }
   }
 
