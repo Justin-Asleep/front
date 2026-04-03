@@ -6,7 +6,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { SearchableSelect } from "@/components/ui/searchable-select"
@@ -112,7 +111,7 @@ export function RegisterTabletModal({ open, onOpenChange, beds, onRegister }: Pr
             </div>
           </div>
 
-          <DialogFooter className="px-8 py-4 flex-row justify-end gap-2 rounded-b-2xl">
+          <div className="border-t border-[#e5e7eb] px-8 py-4 flex justify-end gap-2">
             <Button
               onClick={() => {
                 copyToClipboard(`${result.serial_number}:${result.device_secret}`, "Token")
@@ -128,7 +127,7 @@ export function RegisterTabletModal({ open, onOpenChange, beds, onRegister }: Pr
             >
               Done
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     )
@@ -191,7 +190,7 @@ export function RegisterTabletModal({ open, onOpenChange, beds, onRegister }: Pr
           </div>
         </div>
 
-        <DialogFooter className="px-8 py-4 flex-row justify-end gap-2 rounded-b-2xl">
+        <div className="border-t border-[#e5e7eb] px-8 py-4 flex justify-end gap-2">
           <Button
             variant="outline"
             onClick={handleClose}
@@ -206,7 +205,7 @@ export function RegisterTabletModal({ open, onOpenChange, beds, onRegister }: Pr
           >
             {loading ? "Registering..." : "Register"}
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   )
