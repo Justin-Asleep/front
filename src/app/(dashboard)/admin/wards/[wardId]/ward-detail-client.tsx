@@ -10,6 +10,7 @@ import { EditRoomModal } from "@/components/admin/edit-room-modal"
 import { EditWardModal } from "@/components/admin/edit-ward-modal"
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
 import { apiGet, apiPost, apiPatch, apiDelete } from "@/services/api"
+import { toast } from "sonner"
 
 type RoomType = "SINGLE" | "QUAD" | "HEX"
 
@@ -134,9 +135,9 @@ export function WardDetailClient({ wardId }: { wardId: string }) {
     } catch (err: unknown) {
       const error = err as { response?: { data?: { error_code?: string; message?: string } } }
       if (error.response?.data?.error_code === "ACTIVE_ENCOUNTER_EXISTS") {
-        alert(error.response.data.message ?? "Cannot change room type: beds have active encounters")
+        toast.error(error.response.data.message ?? "Cannot change room type: beds have active encounters")
       } else {
-        console.error("Failed to update room:", err)
+        toast.error("Failed to update room")
       }
     }
   }
