@@ -136,18 +136,17 @@ export function TabletsClient() {
     setCurrentPage(1)
   }
 
-  async function handleRegister(data: { serial: string; secret: string; bedId: string }) {
+  async function handleRegister(data: { bedId: string }) {
     try {
-      await apiPost("/proxy/tablets", {
-        bed_id: data.bedId,
-        serial_number: data.serial,
-        device_secret: data.secret,
-      })
-      toast.success("Tablet registered")
+      const result = await apiPost<{ serial_number: string; device_secret: string }>(
+        "/proxy/tablets", { bed_id: data.bedId }
+      )
       fetchTablets(currentPage)
+      return result
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } }
       toast.error(error.response?.data?.message ?? "Failed to register tablet")
+      return undefined
     }
   }
 
