@@ -120,15 +120,24 @@ export function WardDetailClient({ wardId }: { wardId: string }) {
 
   async function handleSaveRoom(roomData: { room: string; ward: string; type: RoomType; beds: number; occupied: number; available: number; status: "Active" | "Inactive" }) {
     if (!editRoomTarget) return
+    const ROOM_TYPE_VALUE: Record<RoomType, number> = { SINGLE: 1, QUAD: 4, HEX: 6 }
+    const currentType = editRoomTarget.room_type
+    const newType = ROOM_TYPE_VALUE[roomData.type]
     try {
       await apiPatch(`/proxy/wards/rooms/${editRoomTarget.id}`, {
         name: roomData.room,
         is_active: roomData.status === "Active",
+        ...(newType !== currentType ? { room_type: newType } : {}),
       })
       setEditRoomTarget(null)
       await fetchData()
-    } catch (err) {
-      console.error("Failed to update room:", err)
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error_code?: string; message?: string } } }
+      if (error.response?.data?.error_code === "ACTIVE_ENCOUNTER_EXISTS") {
+        alert(error.response.data.message ?? "Cannot change room type: beds have active encounters")
+      } else {
+        console.error("Failed to update room:", err)
+      }
     }
   }
 
