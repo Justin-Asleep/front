@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
 type AvailablePatient = {
+  id: string
   mrn: string
   name: string
   dob: string
@@ -22,6 +23,7 @@ type Props = {
   wardName?: string
   availablePatients: AvailablePatient[]
   onAdmit?: (patient: AvailablePatient) => void
+  loading?: boolean
 }
 
 export function AssignPatientModal({
@@ -31,9 +33,10 @@ export function AssignPatientModal({
   wardName = "Surgery",
   availablePatients,
   onAdmit,
+  loading = false,
 }: Props) {
   const [search, setSearch] = useState("")
-  const [selectedMrn, setSelectedMrn] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const filtered = useMemo(() => {
     if (!search) return availablePatients
@@ -45,20 +48,20 @@ export function AssignPatientModal({
     )
   }, [search, availablePatients])
 
-  const selectedPatient = availablePatients.find((p) => p.mrn === selectedMrn) ?? null
+  const selectedPatient = availablePatients.find((p) => p.id === selectedId) ?? null
 
   function handleAdmit() {
     if (selectedPatient) {
       onAdmit?.(selectedPatient)
       onOpenChange(false)
-      setSelectedMrn(null)
+      setSelectedId(null)
       setSearch("")
     }
   }
 
   function handleCancel() {
     onOpenChange(false)
-    setSelectedMrn(null)
+    setSelectedId(null)
     setSearch("")
   }
 
@@ -111,15 +114,17 @@ export function AssignPatientModal({
               Available Patients (not admitted)
             </p>
             <div className="space-y-1.5 max-h-[260px] overflow-y-auto">
-              {filtered.length === 0 ? (
+              {loading ? (
+                <p className="text-[14px] text-[#9ca3af] text-center py-6">Loading patients...</p>
+              ) : filtered.length === 0 ? (
                 <p className="text-[14px] text-[#9ca3af] text-center py-6">No patients found</p>
               ) : (
                 filtered.map((patient) => {
-                  const isSelected = patient.mrn === selectedMrn
+                  const isSelected = patient.id === selectedId
                   return (
                     <button
-                      key={patient.mrn}
-                      onClick={() => setSelectedMrn(patient.mrn)}
+                      key={patient.id}
+                      onClick={() => setSelectedId(patient.id)}
                       className={[
                         "w-full flex items-center gap-3 px-3 py-3 rounded-[8px] border text-left transition-colors",
                         isSelected

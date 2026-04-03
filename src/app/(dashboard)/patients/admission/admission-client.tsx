@@ -1,78 +1,125 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { ViewDetailModal } from "@/components/patients/view-detail-modal"
 import { AssignPatientModal } from "@/components/patients/assign-patient-modal"
+import { apiGet, apiPost } from "@/services/api"
 
-type BedStatus = "occupied" | "empty"
-
-interface BedData {
-  id: string
-  status: BedStatus
-  patient?: string
-  since?: string
+interface EncounterWithPatient {
+  encounter_id: string
+  patient_id: string
+  patient_name: string
+  patient_mrn: string
+  admitted_at: string
 }
 
-const WARDS = [
-  { id: "internal", label: "Internal Med" },
-  { id: "surgery", label: "Surgery" },
-  { id: "pediatrics", label: "Pediatrics" },
-  { id: "icu", label: "ICU" },
-  { id: "emergency", label: "Emergency" },
-  { id: "rehab", label: "Rehab" },
-]
+interface BedAdmission {
+  id: string
+  bed_number: number
+  label: string
+  encounter: EncounterWithPatient | null
+}
 
-const BEDS: BedData[] = [
-  { id: "301-1", status: "occupied", patient: "Kim Minjun", since: "2026-03-20" },
-  { id: "301-2", status: "occupied", patient: "Park Soyeon", since: "2026-03-18" },
-  { id: "301-3", status: "occupied", patient: "Lee Jungho", since: "2026-03-22" },
-  { id: "301-4", status: "empty" },
-  { id: "302-1", status: "occupied", patient: "Choi Yuna", since: "2026-03-21" },
-  { id: "302-2", status: "empty" },
-  { id: "302-3", status: "occupied", patient: "Jung Hyunwoo", since: "2026-03-15" },
-  { id: "302-4", status: "occupied", patient: "Han Minji", since: "2026-03-23" },
-  { id: "303-1", status: "occupied", patient: "Kang Seojun", since: "2026-03-19" },
-  { id: "303-2", status: "empty" },
-  { id: "303-3", status: "occupied", patient: "Yoon Jiyeon", since: "2026-03-24" },
-  { id: "303-4", status: "occupied", patient: "Oh Donghyun", since: "2026-03-17" },
-  { id: "304-1", status: "empty" },
-  { id: "304-2", status: "occupied", patient: "Shin Areum", since: "2026-03-22" },
-  { id: "304-3", status: "empty" },
-  { id: "304-4", status: "occupied", patient: "Bae Junho", since: "2026-03-20" },
-]
+interface RoomAdmission {
+  id: string
+  name: string
+  room_type: number
+  beds: BedAdmission[]
+}
 
-const AVAILABLE_PATIENTS = [
-  { mrn: "P-001237", name: "Choi Yuna", dob: "1995-08-19" },
-  { mrn: "P-001239", name: "Han Minji", dob: "1988-07-14" },
-  { mrn: "P-001240", name: "Kang Seojun", dob: "1973-12-05" },
-  { mrn: "P-001241", name: "Yoon Jiyeon", dob: "2001-04-22" },
-  { mrn: "P-001242", name: "Shin Areum", dob: "1992-06-15" },
-]
+interface WardDTO {
+  id: string
+  name: string
+  floor: number | null
+}
 
-function groupBedsByRoom(beds: BedData[]) {
-  const rooms = new Map<string, BedData[]>()
-  for (const bed of beds) {
-    const room = bed.id.split("-")[0]
-    if (!rooms.has(room)) rooms.set(room, [])
-    rooms.get(room)!.push(bed)
-  }
-  return Array.from(rooms.entries()).map(([room, beds]) => ({ room, beds }))
+interface PaginatedData<T> {
+  items: T[]
+  total: number
+  page: number
+  size: number
+}
+
+interface AvailablePatient {
+  id: string
+  name: string
+  medical_record_number: string
+  date_of_birth: string | null
+  gender: string | null
 }
 
 export function AdmissionClient() {
   const router = useRouter()
-  const [selectedWard, setSelectedWard] = useState("surgery")
-  const [viewBed, setViewBed] = useState<BedData | null>(null)
-  const [assignBedId, setAssignBedId] = useState<string | null>(null)
+  const [wards, setWards] = useState<WardDTO[]>([])
+  const [selectedWardId, setSelectedWardId] = useState<string | null>(null)
+  const [rooms, setRooms] = useState<RoomAdmission[]>([])
+  const [loading, setLoading] = useState(false)
 
-  const selectedWardLabel = WARDS.find((w) => w.id === selectedWard)?.label ?? ""
-  const totalBeds = BEDS.length
-  const occupiedCount = BEDS.filter((b) => b.status === "occupied").length
-  const availableCount = BEDS.filter((b) => b.status === "empty").length
-  const roomGroups = useMemo(() => groupBedsByRoom(BEDS), [])
+  const [viewBed, setViewBed] = useState<BedAdmission | null>(null)
+  const [viewRoom, setViewRoom] = useState<RoomAdmission | null>(null)
+  const [assignBed, setAssignBed] = useState<BedAdmission | null>(null)
+
+  const [availablePatients, setAvailablePatients] = useState<AvailablePatient[]>([])
+  const [patientsLoading, setPatientsLoading] = useState(false)
+
+  const selectedWard = wards.find((w) => w.id === selectedWardId)
+
+  // Load wards on mount
+  useEffect(() => {
+    async function loadWards() {
+      const data = await apiGet<PaginatedData<WardDTO>>("/proxy/wards?page=1&size=100")
+      setWards(data.items)
+      if (data.items.length > 0) setSelectedWardId(data.items[0].id)
+    }
+    loadWards()
+  }, [])
+
+  // Load admission status when ward changes
+  const loadAdmissionStatus = useCallback(async (wardId: string) => {
+    setLoading(true)
+    try {
+      const data = await apiGet<RoomAdmission[]>(`/proxy/wards/${wardId}/admission-status`)
+      setRooms(data)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (selectedWardId) loadAdmissionStatus(selectedWardId)
+  }, [selectedWardId, loadAdmissionStatus])
+
+  // Load available patients when assign modal opens
+  const loadAvailablePatients = useCallback(async () => {
+    setPatientsLoading(true)
+    try {
+      const data = await apiGet<AvailablePatient[]>("/proxy/patients/available")
+      setAvailablePatients(data)
+    } finally {
+      setPatientsLoading(false)
+    }
+  }, [])
+
+  function handleAssignClick(bed: BedAdmission) {
+    setAssignBed(bed)
+    loadAvailablePatients()
+  }
+
+  async function handleAdmit(patient: AvailablePatient) {
+    if (!assignBed) return
+    await apiPost(`/proxy/patients/${patient.id}/admit`, { bed_id: assignBed.id })
+    setAssignBed(null)
+    if (selectedWardId) loadAdmissionStatus(selectedWardId)
+  }
+
+  // Stats
+  const allBeds = rooms.flatMap((r) => r.beds)
+  const totalBeds = allBeds.length
+  const occupiedCount = allBeds.filter((b) => b.encounter !== null).length
+  const availableCount = totalBeds - occupiedCount
 
   return (
     <div className="space-y-6">
@@ -85,18 +132,18 @@ export function AdmissionClient() {
 
       {/* Ward selector */}
       <div className="flex items-center gap-2 flex-wrap">
-        {WARDS.map((ward) => (
+        {wards.map((ward) => (
           <button
             key={ward.id}
-            onClick={() => setSelectedWard(ward.id)}
+            onClick={() => setSelectedWardId(ward.id)}
             className={cn(
               "h-9 px-3 rounded-lg text-[13px] font-medium border transition-colors cursor-pointer",
-              selectedWard === ward.id
+              selectedWardId === ward.id
                 ? "bg-[#2563eb] text-white border-[#2563eb] font-semibold"
                 : "bg-white text-[#4b5563] border-[#d1d5db] hover:bg-[#f9fafb]"
             )}
           >
-            {ward.label}
+            {ward.name}
           </button>
         ))}
       </div>
@@ -121,100 +168,130 @@ export function AdmissionClient() {
       </div>
 
       <h2 className="text-[15px] font-semibold text-foreground">
-        Bed Grid - {selectedWardLabel}
+        Bed Grid{selectedWard ? ` - ${selectedWard.name}` : ""}
       </h2>
 
-      {/* Room-grouped grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {roomGroups.map(({ room, beds }) => {
-          const roomOccupied = beds.filter((b) => b.status === "occupied").length
-          return (
-            <Card key={room} className="shadow-sm">
-              <CardContent className="p-4">
-                {/* Room header */}
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[14px] font-semibold text-foreground">Room {room}</span>
-                    <span className="text-[12px] text-muted-foreground">
-                      {roomOccupied}/{beds.length} occupied
-                    </span>
+      {/* Loading state */}
+      {loading ? (
+        <div className="text-center py-12 text-muted-foreground text-[14px]">Loading beds...</div>
+      ) : rooms.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground text-[14px]">No rooms found</div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {rooms.map((room) => {
+            const roomOccupied = room.beds.filter((b) => b.encounter !== null).length
+            return (
+              <Card key={room.id} className="shadow-sm">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[14px] font-semibold text-foreground">
+                        Room {room.name}
+                      </span>
+                      <span className="text-[12px] text-muted-foreground">
+                        {roomOccupied}/{room.beds.length} occupied
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-16 rounded-full bg-border overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-[#2563eb]"
+                        style={{
+                          width: room.beds.length > 0
+                            ? `${(roomOccupied / room.beds.length) * 100}%`
+                            : "0%",
+                        }}
+                      />
+                    </div>
                   </div>
-                  <div className="h-1.5 w-16 rounded-full bg-border overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-[#2563eb]"
-                      style={{ width: `${(roomOccupied / beds.length) * 100}%` }}
-                    />
-                  </div>
-                </div>
 
-                {/* Beds grid inside room */}
-                <div className="grid grid-cols-2 gap-2">
-                  {beds.map((bed) => {
-                    const bedNum = bed.id.split("-")[1]
-                    if (bed.status === "occupied") {
+                  <div className="grid grid-cols-2 gap-2">
+                    {room.beds.map((bed) => {
+                      if (bed.encounter) {
+                        return (
+                          <div
+                            key={bed.id}
+                            onClick={() => { setViewBed(bed); setViewRoom(room) }}
+                            className="rounded-lg bg-[#f2f6fe] border border-[#c7d1fa] border-l-[3px] border-l-[#2563eb] px-3 py-2.5 h-[72px] cursor-pointer hover:shadow-md transition-shadow"
+                          >
+                            <span className="text-[12px] font-semibold text-[#2563eb]">
+                              Bed {bed.bed_number}
+                            </span>
+                            <p className="text-[13px] font-semibold text-foreground mt-0.5 truncate">
+                              {bed.encounter.patient_name}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {bed.encounter.admitted_at.split("T")[0]}
+                            </p>
+                          </div>
+                        )
+                      }
+
                       return (
                         <div
                           key={bed.id}
-                          onClick={() => setViewBed(bed)}
-                          className="rounded-lg bg-[#f2f6fe] border border-[#c7d1fa] border-l-[3px] border-l-[#2563eb] px-3 py-2.5 h-[72px] cursor-pointer hover:shadow-md transition-shadow"
+                          onClick={() => handleAssignClick(bed)}
+                          className="rounded-lg bg-[#f9fafb] border border-dashed border-[#d1d5db] px-3 py-2.5 h-[72px] cursor-pointer hover:bg-[#f4f5f7] transition-colors flex flex-col items-center justify-center"
                         >
-                          <span className="text-[12px] font-semibold text-[#2563eb]">Bed {bedNum}</span>
-                          <p className="text-[13px] font-semibold text-foreground mt-0.5 truncate">{bed.patient}</p>
-                          <p className="text-[10px] text-muted-foreground">{bed.since}</p>
+                          <span className="text-[12px] font-semibold text-muted-foreground">
+                            Bed {bed.bed_number}
+                          </span>
+                          <span className="text-[10px] font-medium text-[#4b5563] mt-1 border border-[#d1d5db] rounded px-1.5 py-0.5 bg-white">
+                            + Assign
+                          </span>
                         </div>
                       )
-                    }
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      )}
 
-                    return (
-                      <div
-                        key={bed.id}
-                        onClick={() => setAssignBedId(bed.id)}
-                        className="rounded-lg bg-[#f9fafb] border border-dashed border-[#d1d5db] px-3 py-2.5 h-[72px] cursor-pointer hover:bg-[#f4f5f7] transition-colors flex flex-col items-center justify-center"
-                      >
-                        <span className="text-[12px] font-semibold text-muted-foreground">Bed {bedNum}</span>
-                        <span className="text-[10px] font-medium text-[#4b5563] mt-1 border border-[#d1d5db] rounded px-1.5 py-0.5 bg-white">
-                          + Assign
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
-
-      {/* Modals */}
+      {/* View Detail Modal */}
       <ViewDetailModal
         open={viewBed !== null}
-        onOpenChange={(open) => { if (!open) setViewBed(null) }}
+        onOpenChange={(open) => { if (!open) { setViewBed(null); setViewRoom(null) } }}
         onMeasurementHistory={() => {
+          const mrn = viewBed?.encounter?.patient_mrn ?? ""
           setViewBed(null)
-          router.push(`/patients/measurement?mrn=P-001234`)
+          setViewRoom(null)
+          router.push(`/patients/measurement?mrn=${mrn}`)
         }}
-        patient={viewBed ? {
-          mrn: "P-001234",
-          name: viewBed.patient ?? "",
-          gender: "Male",
-          admittedDate: viewBed.since ?? "2026-03-20",
-          bed: viewBed.id,
-          ward: `${selectedWardLabel} Ward`,
-          room: `Room ${viewBed.id.split("-")[0]}`,
-          attending: "Dr. Park Jihoon",
+        patient={viewBed?.encounter ? {
+          mrn: viewBed.encounter.patient_mrn,
+          name: viewBed.encounter.patient_name,
+          gender: "",
+          admittedDate: viewBed.encounter.admitted_at.split("T")[0],
+          bed: viewBed.label,
+          ward: selectedWard?.name ?? "",
+          room: viewRoom ? `Room ${viewRoom.name}` : "",
+          attending: "",
           status: "Normal",
-          vitals: { hr: 72, spo2: 98, rr: 16, temp: 36.5, bp: "120/80" },
-          vitalsUpdated: "Updated 5 min ago",
+          vitals: { hr: 0, spo2: 0, rr: 0, temp: 0, bp: "-/-" },
+          vitalsUpdated: "",
           alarmNote: "No active alarms",
         } : null}
       />
 
+      {/* Assign Patient Modal */}
       <AssignPatientModal
-        open={assignBedId !== null}
-        onOpenChange={(open) => { if (!open) setAssignBedId(null) }}
-        bedId={assignBedId ?? ""}
-        wardName={selectedWardLabel}
-        availablePatients={AVAILABLE_PATIENTS}
+        open={assignBed !== null}
+        onOpenChange={(open) => { if (!open) setAssignBed(null) }}
+        bedId={assignBed?.label ?? ""}
+        wardName={selectedWard?.name ?? ""}
+        availablePatients={availablePatients.map((p) => ({
+          id: p.id,
+          mrn: p.medical_record_number,
+          name: p.name,
+          dob: p.date_of_birth ?? "",
+        }))}
+        onAdmit={(patient) => {
+          const found = availablePatients.find((p) => p.id === patient.id)
+          if (found) handleAdmit(found)
+        }}
+        loading={patientsLoading}
       />
     </div>
   )

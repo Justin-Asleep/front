@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -16,45 +16,92 @@ import {
 import { Pencil, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AddWardModal } from "@/components/admin/add-ward-modal"
-import { EditWardModal } from "@/components/admin/edit-ward-modal"
-import { OccupancyBar } from "@/components/ui/occupancy-bar"
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
-import { type WardStatus, type Ward } from "@/data/ward-data"
-import { statusBadgeClass } from "@/helpers/status-badge"
+import { apiGet, apiPost, apiDelete } from "@/services/api"
 
-export function WardsClient({ initialWards }: { initialWards: Ward[] }) {
+interface WardDTO {
+  id: string
+  hospital_id: string
+  name: string
+  floor: number | null
+  is_active: boolean
+}
+
+interface PaginatedData<T> {
+  items: T[]
+  total: number
+  page: number
+  size: number
+  pages: number
+}
+
+export function WardsClient() {
   const router = useRouter()
-  const [wards, setWards] = useState<Ward[]>(initialWards)
+  const [wards, setWards] = useState<WardDTO[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [addOpen, setAddOpen] = useState(false)
-  const [editTarget, setEditTarget] = useState<Ward | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<Ward | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<WardDTO | null>(null)
 
-  function handleAdd(data: { name: string; floor: string }) {
-    const newWard: Ward = {
-      id: String(Date.now()),
-      name: data.name,
-      floor: data.floor ? `${data.floor}F` : "—",
-      rooms: 0,
-      beds: 0,
-      occupancy: 0,
-      status: "Active",
+  const fetchWards = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const data = await apiGet<PaginatedData<WardDTO>>(
+        `/proxy/wards?page=1&size=100`
+      )
+      setWards(data.items)
+    } catch (err) {
+      setError("Failed to load wards")
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
-    setWards((prev) => [...prev, newWard])
+  }, [])
+
+  useEffect(() => {
+    fetchWards()
+  }, [fetchWards])
+
+  async function handleAdd(data: { name: string; floor: string }) {
+    try {
+      await apiPost(`/proxy/wards`, {
+        name: data.name,
+        floor: data.floor ? Number(data.floor) : null,
+      })
+      await fetchWards()
+    } catch (err) {
+      console.error("Failed to create ward:", err)
+    }
   }
 
-  function handleSave(data: { id: string; name: string; floor: string; status: WardStatus }) {
-    setWards((prev) =>
-      prev.map((w) =>
-        w.id === data.id
-          ? { ...w, name: data.name, floor: data.floor ? `${data.floor}F` : w.floor, status: data.status }
-          : w
-      )
+  async function handleDelete() {
+    if (!deleteTarget) return
+    try {
+      await apiDelete(`/proxy/wards/${deleteTarget.id}`)
+      setDeleteTarget(null)
+      await fetchWards()
+    } catch (err) {
+      console.error("Failed to delete ward:", err)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-[#9ca3af]">Loading wards...</p>
+      </div>
     )
   }
 
-  const editTargetForModal = editTarget
-    ? { ...editTarget, floor: editTarget.floor.replace("F", "") }
-    : null
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-2">
+        <p className="text-[#dc2626]">{error}</p>
+        <Button variant="outline" onClick={fetchWards}>Retry</Button>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -78,54 +125,61 @@ export function WardsClient({ initialWards }: { initialWards: Ward[] }) {
               <TableRow className="bg-[#f9fafb] hover:bg-[#f9fafb] border-b border-[#e5e7eb]">
                 <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">Ward Name</TableHead>
                 <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">Floor</TableHead>
-                <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">Rooms</TableHead>
-                <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">Beds</TableHead>
-                <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">Occupancy</TableHead>
                 <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">Status</TableHead>
                 <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {wards.map((ward, idx) => (
-                <TableRow
-                  key={ward.id}
-                  className={cn(
-                    "border-b border-[#e5e7eb]",
-                    idx % 2 === 1 ? "bg-[#f9fafb]" : "bg-white"
-                  )}
-                >
-                  <TableCell className="px-6 py-3 font-medium text-[#111827]">{ward.name}</TableCell>
-                  <TableCell className="px-6 py-3 text-[#4b5563]">{ward.floor}</TableCell>
-                  <TableCell className="px-6 py-3 text-[#4b5563]">{ward.rooms}</TableCell>
-                  <TableCell className="px-6 py-3 text-[#4b5563]">{ward.beds}</TableCell>
-                  <TableCell className="px-6 py-3">
-                    <OccupancyBar value={ward.occupancy} />
-                  </TableCell>
-                  <TableCell className="px-6 py-3">
-                    <Badge className={statusBadgeClass[ward.status]}>{ward.status}</Badge>
-                  </TableCell>
-                  <TableCell className="px-6 py-3">
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 text-[#2563eb] hover:text-[#1d4ed8]"
-                        onClick={() => router.push('/admin/wards/' + ward.id)}
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 text-[#dc2626] hover:text-[#b91c1c]"
-                        onClick={() => setDeleteTarget(ward)}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </div>
+              {wards.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="px-6 py-8 text-center text-[#9ca3af]">
+                    No wards found. Click &quot;+ Add Ward&quot; to create one.
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                wards.map((ward, idx) => (
+                  <TableRow
+                    key={ward.id}
+                    className={cn(
+                      "border-b border-[#e5e7eb]",
+                      idx % 2 === 1 ? "bg-[#f9fafb]" : "bg-white"
+                    )}
+                  >
+                    <TableCell className="px-6 py-3 font-medium text-[#111827]">{ward.name}</TableCell>
+                    <TableCell className="px-6 py-3 text-[#4b5563]">
+                      {ward.floor ? `${ward.floor}F` : "—"}
+                    </TableCell>
+                    <TableCell className="px-6 py-3">
+                      <Badge className={ward.is_active
+                        ? "bg-[#dcfce7] text-[#16a34a] border-0"
+                        : "bg-[#f3f4f6] text-[#6b7280] border-0"
+                      }>
+                        {ward.is_active ? "Active" : "Inactive"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="px-6 py-3">
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-[#2563eb] hover:text-[#1d4ed8]"
+                          onClick={() => router.push('/admin/wards/' + ward.id)}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-[#dc2626] hover:text-[#b91c1c]"
+                          onClick={() => setDeleteTarget(ward)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -137,24 +191,12 @@ export function WardsClient({ initialWards }: { initialWards: Ward[] }) {
         onAdd={handleAdd}
       />
 
-      <EditWardModal
-        open={editTarget !== null}
-        onOpenChange={(open) => { if (!open) setEditTarget(null) }}
-        ward={editTargetForModal}
-        onSave={handleSave}
-      />
-
       <ConfirmDeleteDialog
         open={deleteTarget !== null}
         onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
         title="Delete Ward"
         targetName={deleteTarget?.name ?? ""}
-        onConfirm={() => {
-          if (deleteTarget) {
-            setWards((prev) => prev.filter((w) => w.id !== deleteTarget.id))
-            setDeleteTarget(null)
-          }
-        }}
+        onConfirm={handleDelete}
       />
     </div>
   )
