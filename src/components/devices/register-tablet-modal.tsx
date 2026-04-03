@@ -94,9 +94,9 @@ export function RegisterTabletModal({ open, onOpenChange, beds, onRegister }: Pr
 
             <div className="space-y-1.5">
               <label className="text-[13px] font-medium text-[#9ca3af]">Device Secret</label>
-              <div className="flex items-center gap-2 h-10 bg-[#f9fafb] rounded-lg px-3.5">
-                <span className="flex-1 text-[14px] font-mono font-medium text-[#111827] truncate">{result.device_secret}</span>
-                <button onClick={() => copyToClipboard(result.device_secret, "Secret")} className="text-[#9ca3af] hover:text-[#4b5563]">
+              <div className="flex items-center gap-2 min-h-10 bg-[#f9fafb] rounded-lg px-3.5 py-2">
+                <span className="flex-1 text-[13px] font-mono font-medium text-[#111827] break-all">{result.device_secret}</span>
+                <button onClick={() => copyToClipboard(result.device_secret, "Secret")} className="text-[#9ca3af] hover:text-[#4b5563] shrink-0">
                   <Copy className="size-4" />
                 </button>
               </div>
@@ -109,7 +109,7 @@ export function RegisterTabletModal({ open, onOpenChange, beds, onRegister }: Pr
                   This is the only time the device secret will be shown.
                 </p>
                 <p className="text-[11px] text-[#b45309]">
-                  Token format: <code className="bg-[#fef3c7] px-1 rounded">{result.serial_number}:{result.device_secret}</code>
+                  Token format: <code className="bg-[#fef3c7] px-1 rounded break-all">{result.serial_number}:{result.device_secret}</code>
                 </p>
               </div>
             </div>
