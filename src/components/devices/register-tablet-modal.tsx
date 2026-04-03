@@ -18,42 +18,41 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-const MOCK_BEDS = [
-  "Ward A / Room 101 / Bed 101",
-  "Ward A / Room 102 / Bed 102",
-  "Ward A / Room 103 / Bed 103",
-  "Ward B / Room 201 / Bed 201",
-  "Ward B / Room 202 / Bed 202",
-  "Ward B / Room 203 / Bed 203",
-  "Ward C / Room 301 / Bed 301",
-  "Ward C / Room 302 / Bed 302",
-]
+interface BedOption {
+  id: string
+  label: string
+  room_name: string
+  ward_name: string
+}
 
 type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onRegister?: (data: { serial: string; secret: string; bed: string }) => void
+  beds: BedOption[]
+  onRegister?: (data: { serial: string; secret: string; bedId: string }) => void
 }
 
-export function RegisterTabletModal({ open, onOpenChange, onRegister }: Props) {
+export function RegisterTabletModal({ open, onOpenChange, beds, onRegister }: Props) {
   const [serial, setSerial] = useState("")
   const [secret, setSecret] = useState("")
-  const [bed, setBed] = useState("")
+  const [bedId, setBedId] = useState("")
 
   function handleSubmit() {
-    if (!serial || !secret || !bed) return
-    onRegister?.({ serial, secret, bed })
-    setSerial("")
-    setSecret("")
-    setBed("")
+    if (!serial || !secret || !bedId) return
+    onRegister?.({ serial, secret, bedId })
+    resetForm()
     onOpenChange(false)
   }
 
   function handleCancel() {
+    resetForm()
+    onOpenChange(false)
+  }
+
+  function resetForm() {
     setSerial("")
     setSecret("")
-    setBed("")
-    onOpenChange(false)
+    setBedId("")
   }
 
   return (
@@ -87,7 +86,6 @@ export function RegisterTabletModal({ open, onOpenChange, onRegister }: Props) {
 
         {/* Body */}
         <div className="px-8 pt-5 pb-5 flex flex-col gap-4">
-          {/* Serial Number */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[13px] font-medium text-[#111827]">
               Serial Number <span className="text-[#dc2626]">*</span>
@@ -100,7 +98,6 @@ export function RegisterTabletModal({ open, onOpenChange, onRegister }: Props) {
             />
           </div>
 
-          {/* Device Secret */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[13px] font-medium text-[#111827]">
               Device Secret <span className="text-[#dc2626]">*</span>
@@ -114,26 +111,24 @@ export function RegisterTabletModal({ open, onOpenChange, onRegister }: Props) {
             />
           </div>
 
-          {/* Assign to Bed */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[13px] font-medium text-[#111827]">
               Assign to Bed <span className="text-[#dc2626]">*</span>
             </label>
-            <Select value={bed} onValueChange={(v) => setBed(v ?? "")}>
+            <Select value={bedId} onValueChange={(v) => setBedId(v ?? "")}>
               <SelectTrigger className="h-10 w-full border-[#d1d5db] rounded-lg text-[14px]">
                 <SelectValue placeholder="Select bed..." />
               </SelectTrigger>
               <SelectContent>
-                {MOCK_BEDS.map((b) => (
-                  <SelectItem key={b} value={b}>
-                    {b}
+                {beds.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.ward_name} / {b.room_name} / {b.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          {/* Info box */}
           <div className="bg-[#eff6ff] rounded-lg px-4 py-3 flex gap-2">
             <span className="mt-0.5 size-2 rounded-full bg-[#2563eb] flex-shrink-0" />
             <div>
@@ -158,7 +153,7 @@ export function RegisterTabletModal({ open, onOpenChange, onRegister }: Props) {
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!serial || !secret || !bed}
+            disabled={!serial || !secret || !bedId}
             className="h-10 px-5 bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-semibold text-[14px]"
           >
             Register

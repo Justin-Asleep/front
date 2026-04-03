@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,61 +20,111 @@ import { RegisterTabletModal } from "@/components/devices/register-tablet-modal"
 import { EditTabletModal } from "@/components/devices/edit-tablet-modal"
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
 import { statusBadgeClass } from "@/helpers/status-badge"
+import { apiGet, apiPost, apiPatch, apiDelete } from "@/services/api"
+import { toast } from "sonner"
 
-type Status = "Active" | "Inactive"
-
-type Tablet = {
+interface TabletWithBed {
   id: string
-  serial: string
-  bed: string
-  wardRoom: string
-  status: Status
-  lastHeartbeat: string
+  bed_id: string | null
+  serial_number: string
+  is_active: boolean
+  bed_label: string | null
+  room_name: string | null
+  ward_name: string | null
 }
 
-const initialTablets: Tablet[] = [
-  { id: "1",  serial: "TAB-001-A", bed: "Bed 101",     wardRoom: "Ward A / Room 101", status: "Active",   lastHeartbeat: "2 min ago" },
-  { id: "2",  serial: "TAB-002-B", bed: "Bed 102",     wardRoom: "Ward A / Room 102", status: "Active",   lastHeartbeat: "1 min ago" },
-  { id: "3",  serial: "TAB-003-C", bed: "Bed 201",     wardRoom: "Ward B / Room 201", status: "Active",   lastHeartbeat: "Just now" },
-  { id: "4",  serial: "TAB-004-D", bed: "Bed 202",     wardRoom: "Ward B / Room 202", status: "Inactive", lastHeartbeat: "3 hours ago" },
-  { id: "5",  serial: "TAB-005-E", bed: "Bed 301",     wardRoom: "Ward C / Room 301", status: "Active",   lastHeartbeat: "5 min ago" },
-  { id: "6",  serial: "TAB-006-F", bed: "Unassigned",  wardRoom: "-",                 status: "Inactive", lastHeartbeat: "2 days ago" },
-  { id: "7",  serial: "TAB-007-G", bed: "Bed 103",     wardRoom: "Ward A / Room 103", status: "Active",   lastHeartbeat: "4 min ago" },
-  { id: "8",  serial: "TAB-008-H", bed: "Bed 302",     wardRoom: "Ward C / Room 302", status: "Active",   lastHeartbeat: "7 min ago" },
-  { id: "9",  serial: "TAB-009-I", bed: "Bed 203",     wardRoom: "Ward B / Room 203", status: "Active",   lastHeartbeat: "5 min ago" },
-  { id: "10", serial: "TAB-010-J", bed: "Bed 401",     wardRoom: "Ward D / Room 401", status: "Active",   lastHeartbeat: "1 min ago" },
-  { id: "11", serial: "TAB-011-K", bed: "Bed 402",     wardRoom: "Ward D / Room 402", status: "Active",   lastHeartbeat: "3 min ago" },
-  { id: "12", serial: "TAB-012-L", bed: "Unassigned",  wardRoom: "-",                 status: "Inactive", lastHeartbeat: "5 days ago" },
-]
+interface PaginatedData<T> {
+  items: T[]
+  total: number
+  page: number
+  size: number
+  pages: number
+}
+
+interface BedOption {
+  id: string
+  label: string
+  room_name: string
+  ward_name: string
+}
 
 const STATUS_FILTERS = ["All", "Active", "Inactive"] as const
-const PAGE_SIZE = 6
+const PAGE_SIZE = 10
 
 export function TabletsClient() {
-  const [tablets, setTablets] = useState<Tablet[]>(initialTablets)
+  const [tablets, setTablets] = useState<TabletWithBed[]>([])
+  const [total, setTotal] = useState(0)
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [selectedStatus, setSelectedStatus] = useState<string>("All")
   const [currentPage, setCurrentPage] = useState(1)
 
+  const [beds, setBeds] = useState<BedOption[]>([])
   const [registerOpen, setRegisterOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [selectedTablet, setSelectedTablet] = useState<Tablet | null>(null)
+  const [selectedTablet, setSelectedTablet] = useState<TabletWithBed | null>(null)
 
-  const filtered = useMemo(() => {
-    return tablets.filter((t) => {
-      const matchesSearch =
-        search === "" ||
-        t.serial.toLowerCase().includes(search.toLowerCase()) ||
-        t.bed.toLowerCase().includes(search.toLowerCase())
-      const matchesStatus = selectedStatus === "All" || t.status === selectedStatus
-      return matchesSearch && matchesStatus
-    })
-  }, [tablets, search, selectedStatus])
+  const fetchTablets = useCallback(async (page: number) => {
+    setLoading(true)
+    try {
+      const data = await apiGet<PaginatedData<TabletWithBed>>(
+        `/proxy/tablets?page=${page}&size=${PAGE_SIZE}`
+      )
+      setTablets(data.items)
+      setTotal(data.total)
+    } catch {
+      toast.error("Failed to load tablets")
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
-  const start = (currentPage - 1) * PAGE_SIZE
-  const paginated = filtered.slice(start, start + PAGE_SIZE)
+  const fetchBeds = useCallback(async () => {
+    try {
+      const wardsData = await apiGet<PaginatedData<{ id: string; name: string }>>(
+        "/proxy/wards?page=1&size=100"
+      )
+      const allBeds: BedOption[] = []
+      for (const ward of wardsData.items) {
+        const roomsData = await apiGet<PaginatedData<{
+          id: string; name: string; beds: { id: string; bed_number: number; label: string }[]
+        }>>(`/proxy/wards/${ward.id}/rooms?page=1&size=100`)
+        for (const room of roomsData.items) {
+          for (const bed of room.beds) {
+            allBeds.push({
+              id: bed.id,
+              label: bed.label,
+              room_name: room.name,
+              ward_name: ward.name,
+            })
+          }
+        }
+      }
+      setBeds(allBeds)
+    } catch {
+      console.error("Failed to load beds")
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchTablets(currentPage)
+  }, [currentPage, fetchTablets])
+
+  // Client-side filter (search + status)
+  const filtered = tablets.filter((t) => {
+    const matchesSearch =
+      search === "" ||
+      t.serial_number.toLowerCase().includes(search.toLowerCase()) ||
+      (t.bed_label ?? "").toLowerCase().includes(search.toLowerCase())
+    const matchesStatus =
+      selectedStatus === "All" ||
+      (selectedStatus === "Active" && t.is_active) ||
+      (selectedStatus === "Inactive" && !t.is_active)
+    return matchesSearch && matchesStatus
+  })
+
+  const totalPages = Math.ceil(total / PAGE_SIZE)
 
   function handleStatusChange(status: string) {
     setSelectedStatus(status)
@@ -86,44 +136,61 @@ export function TabletsClient() {
     setCurrentPage(1)
   }
 
-  function handleRegister(data: { serial: string; secret: string; bed: string }) {
-    const parts = data.bed.split(" / ")
-    const bed = parts[2] ?? data.bed
-    const wardRoom = parts.slice(0, 2).join(" / ")
-    const newTablet: Tablet = {
-      id: String(Date.now()),
-      serial: data.serial,
-      bed,
-      wardRoom,
-      status: "Active",
-      lastHeartbeat: "Just now",
-    }
-    setTablets((prev) => [newTablet, ...prev])
-  }
-
-  function handleEdit(data: { id: string; bed: string; status: Status; newSecret: string }) {
-    setTablets((prev) =>
-      prev.map((t) => {
-        if (t.id !== data.id) return t
-        const parts = data.bed.split(" / ")
-        const bed = parts[2] ?? data.bed
-        const wardRoom = parts.slice(0, 2).join(" / ")
-        return { ...t, bed, wardRoom, status: data.status }
+  async function handleRegister(data: { serial: string; secret: string; bedId: string }) {
+    try {
+      await apiPost("/proxy/tablets", {
+        bed_id: data.bedId,
+        serial_number: data.serial,
+        device_secret: data.secret,
       })
-    )
+      toast.success("Tablet registered")
+      fetchTablets(currentPage)
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } }
+      toast.error(error.response?.data?.message ?? "Failed to register tablet")
+    }
   }
 
-  function handleDelete(id: string) {
-    setTablets((prev) => prev.filter((t) => t.id !== id))
-    setCurrentPage(1)
+  async function handleEdit(data: { id: string; bedId: string | null; isActive: boolean; deviceSecret: string }) {
+    try {
+      await apiPatch(`/proxy/tablets/${data.id}`, {
+        bed_id: data.bedId,
+        is_active: data.isActive,
+        ...(data.deviceSecret ? { device_secret: data.deviceSecret } : {}),
+      })
+      toast.success("Tablet updated")
+      setEditOpen(false)
+      fetchTablets(currentPage)
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } }
+      toast.error(error.response?.data?.message ?? "Failed to update tablet")
+    }
   }
 
-  function openEdit(tablet: Tablet) {
+  async function handleDelete() {
+    if (!selectedTablet) return
+    try {
+      await apiDelete(`/proxy/tablets/${selectedTablet.id}`)
+      toast.success("Tablet deactivated")
+      setDeleteOpen(false)
+      fetchTablets(currentPage)
+    } catch {
+      toast.error("Failed to delete tablet")
+    }
+  }
+
+  function openEdit(tablet: TabletWithBed) {
     setSelectedTablet(tablet)
     setEditOpen(true)
+    fetchBeds()
   }
 
-  function openDelete(tablet: Tablet) {
+  function openRegister() {
+    setRegisterOpen(true)
+    fetchBeds()
+  }
+
+  function openDelete(tablet: TabletWithBed) {
     setSelectedTablet(tablet)
     setDeleteOpen(true)
   }
@@ -136,7 +203,7 @@ export function TabletsClient() {
           <p className="text-sm text-[#4b5563]">Register and manage tablet devices</p>
         </div>
         <Button
-          onClick={() => setRegisterOpen(true)}
+          onClick={openRegister}
           className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white"
         >
           + Register Tablet
@@ -182,65 +249,77 @@ export function TabletsClient() {
                 <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Bed</TableHead>
                 <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Ward / Room</TableHead>
                 <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Status</TableHead>
-                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Last Heartbeat</TableHead>
                 <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginated.length === 0 ? (
+              {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="px-4 py-12 text-center text-[#9ca3af]">
+                  <TableCell colSpan={5} className="px-4 py-12 text-center text-[#9ca3af]">
+                    Loading...
+                  </TableCell>
+                </TableRow>
+              ) : filtered.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="px-4 py-12 text-center text-[#9ca3af]">
                     No tablets found
                   </TableCell>
                 </TableRow>
               ) : (
-                paginated.map((tablet, idx) => (
-                  <TableRow
-                    key={tablet.id}
-                    className={cn(
-                      "border-b border-[#e5e7eb]",
-                      idx % 2 === 1 ? "bg-[#fcfcfe]" : "bg-white"
-                    )}
-                  >
-                    <TableCell className="px-6 py-3">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={cn(
-                            "w-2 h-2 rounded-full flex-shrink-0",
-                            tablet.status === "Active" ? "bg-[#16a34a]" : "bg-[#9ca3af]"
-                          )}
-                        />
-                        <span className="font-medium text-[#111827]">{tablet.serial}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-4 py-3 text-[#111827] text-[13px]">{tablet.bed}</TableCell>
-                    <TableCell className="px-4 py-3 text-[#4b5563] text-[13px]">{tablet.wardRoom}</TableCell>
-                    <TableCell className="px-4 py-3">
-                      <Badge className={statusBadgeClass[tablet.status]}>{tablet.status}</Badge>
-                    </TableCell>
-                    <TableCell className="px-4 py-3 text-[#4b5563] text-[13px]">{tablet.lastHeartbeat}</TableCell>
-                    <TableCell className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-8 text-[#2563eb] hover:text-[#1d4ed8]"
-                          onClick={() => openEdit(tablet)}
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-8 text-[#dc2626] hover:text-[#b91c1c]"
-                          onClick={() => openDelete(tablet)}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                filtered.map((tablet, idx) => {
+                  const statusLabel = tablet.is_active ? "Active" : "Inactive"
+                  const wardRoom = tablet.ward_name && tablet.room_name
+                    ? `${tablet.ward_name} / ${tablet.room_name}`
+                    : "-"
+                  return (
+                    <TableRow
+                      key={tablet.id}
+                      className={cn(
+                        "border-b border-[#e5e7eb]",
+                        idx % 2 === 1 ? "bg-[#fcfcfe]" : "bg-white"
+                      )}
+                    >
+                      <TableCell className="px-6 py-3">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={cn(
+                              "w-2 h-2 rounded-full flex-shrink-0",
+                              tablet.is_active ? "bg-[#16a34a]" : "bg-[#9ca3af]"
+                            )}
+                          />
+                          <span className="font-medium text-[#111827]">{tablet.serial_number}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-[#111827] text-[13px]">
+                        {tablet.bed_label ?? "Unassigned"}
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-[#4b5563] text-[13px]">{wardRoom}</TableCell>
+                      <TableCell className="px-4 py-3">
+                        <Badge className={statusBadgeClass[statusLabel]}>{statusLabel}</Badge>
+                      </TableCell>
+                      <TableCell className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 text-[#2563eb] hover:text-[#1d4ed8]"
+                            onClick={() => openEdit(tablet)}
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 text-[#dc2626] hover:text-[#b91c1c]"
+                            onClick={() => openDelete(tablet)}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
               )}
             </TableBody>
           </Table>
@@ -248,7 +327,7 @@ export function TabletsClient() {
           <PaginationBar
             currentPage={currentPage}
             totalPages={totalPages}
-            totalItems={filtered.length}
+            totalItems={total}
             pageSize={PAGE_SIZE}
             onPageChange={setCurrentPage}
             label="tablets"
@@ -259,22 +338,29 @@ export function TabletsClient() {
       <RegisterTabletModal
         open={registerOpen}
         onOpenChange={setRegisterOpen}
+        beds={beds}
         onRegister={handleRegister}
       />
 
       <EditTabletModal
         open={editOpen}
         onOpenChange={setEditOpen}
-        tablet={selectedTablet}
+        tablet={selectedTablet ? {
+          id: selectedTablet.id,
+          serial_number: selectedTablet.serial_number,
+          bed_id: selectedTablet.bed_id,
+          is_active: selectedTablet.is_active,
+        } : null}
+        beds={beds}
         onSave={handleEdit}
       />
 
       <ConfirmDeleteDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        title="Delete Tablet"
-        targetName={selectedTablet?.serial ?? ""}
-        onConfirm={() => selectedTablet && handleDelete(selectedTablet.id)}
+        title="Deactivate Tablet"
+        targetName={selectedTablet?.serial_number ?? ""}
+        onConfirm={handleDelete}
       />
     </div>
   )

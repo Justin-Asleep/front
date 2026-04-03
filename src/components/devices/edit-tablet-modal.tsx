@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -19,40 +19,49 @@ import {
 import { cn } from "@/lib/utils"
 import { Switch } from "@/components/ui/switch"
 
-const MOCK_BEDS = [
-  "Ward A / Room 101 / Bed 101",
-  "Ward A / Room 102 / Bed 102",
-  "Ward A / Room 103 / Bed 103",
-  "Ward B / Room 201 / Bed 201",
-  "Ward B / Room 202 / Bed 202",
-  "Ward B / Room 203 / Bed 203",
-  "Ward C / Room 301 / Bed 301",
-  "Ward C / Room 302 / Bed 302",
-]
-
-type Tablet = {
+interface BedOption {
   id: string
-  serial: string
-  wardRoom: string
-  status: "Active" | "Inactive"
+  label: string
+  room_name: string
+  ward_name: string
+}
+
+interface TabletData {
+  id: string
+  serial_number: string
+  bed_id: string | null
+  is_active: boolean
 }
 
 type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  tablet: Tablet | null
-  onSave?: (data: { id: string; bed: string; status: "Active" | "Inactive"; newSecret: string }) => void
+  tablet: TabletData | null
+  beds: BedOption[]
+  onSave?: (data: { id: string; bedId: string | null; isActive: boolean; deviceSecret: string }) => void
 }
 
-export function EditTabletModal({ open, onOpenChange, tablet, onSave }: Props) {
-  const [bed, setBed] = useState(tablet?.wardRoom ?? "")
-  const [active, setActive] = useState(tablet?.status !== "Inactive")
+export function EditTabletModal({ open, onOpenChange, tablet, beds, onSave }: Props) {
+  const [bedId, setBedId] = useState(tablet?.bed_id ?? "")
+  const [active, setActive] = useState(tablet?.is_active ?? true)
   const [newSecret, setNewSecret] = useState("")
 
+  useEffect(() => {
+    if (tablet) {
+      setBedId(tablet.bed_id ?? "")
+      setActive(tablet.is_active)
+      setNewSecret("")
+    }
+  }, [tablet])
+
   function handleSave() {
-    if (!tablet || !bed) return
-    onSave?.({ id: tablet.id, bed, status: active ? "Active" : "Inactive", newSecret })
-    onOpenChange(false)
+    if (!tablet) return
+    onSave?.({
+      id: tablet.id,
+      bedId: bedId || null,
+      isActive: active,
+      deviceSecret: newSecret,
+    })
   }
 
   function handleCancel() {
@@ -97,7 +106,7 @@ export function EditTabletModal({ open, onOpenChange, tablet, onSave }: Props) {
             </label>
             <div className="h-10 bg-[#f9fafb] rounded-lg flex items-center px-3.5">
               <span className="text-[14px] font-medium text-[#4b5563]">
-                {tablet?.serial ?? ""}
+                {tablet?.serial_number ?? ""}
               </span>
             </div>
           </div>
@@ -105,16 +114,16 @@ export function EditTabletModal({ open, onOpenChange, tablet, onSave }: Props) {
           {/* Assign to Bed */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[13px] font-medium text-[#111827]">
-              Assign to Bed <span className="text-[#dc2626]">*</span>
+              Assign to Bed
             </label>
-            <Select value={bed} onValueChange={(v) => setBed(v ?? "")}>
+            <Select value={bedId} onValueChange={(v) => setBedId(v ?? "")}>
               <SelectTrigger className="h-10 w-full border-[#d1d5db] rounded-lg text-[14px]">
                 <SelectValue placeholder="Select bed..." />
               </SelectTrigger>
               <SelectContent>
-                {MOCK_BEDS.map((b) => (
-                  <SelectItem key={b} value={b}>
-                    {b}
+                {beds.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.ward_name} / {b.room_name} / {b.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -144,7 +153,6 @@ export function EditTabletModal({ open, onOpenChange, tablet, onSave }: Props) {
             </div>
           </div>
 
-          {/* Divider */}
           <div className="border-t border-[#e5e7eb]" />
 
           {/* Reset Device Secret */}
@@ -175,7 +183,6 @@ export function EditTabletModal({ open, onOpenChange, tablet, onSave }: Props) {
           </Button>
           <Button
             onClick={handleSave}
-            disabled={!bed}
             className="h-10 w-[140px] bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-semibold text-[14px] rounded-lg"
           >
             Save Changes
