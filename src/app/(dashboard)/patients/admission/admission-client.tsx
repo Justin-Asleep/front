@@ -43,14 +43,6 @@ interface PaginatedData<T> {
   size: number
 }
 
-interface AvailablePatient {
-  id: string
-  name: string
-  medical_record_number: string
-  date_of_birth: string | null
-  gender: string | null
-}
-
 export function AdmissionClient() {
   const router = useRouter()
   const [wards, setWards] = useState<WardDTO[]>([])
@@ -61,9 +53,6 @@ export function AdmissionClient() {
   const [viewBed, setViewBed] = useState<BedAdmission | null>(null)
   const [viewRoom, setViewRoom] = useState<RoomAdmission | null>(null)
   const [assignBed, setAssignBed] = useState<BedAdmission | null>(null)
-
-  const [availablePatients, setAvailablePatients] = useState<AvailablePatient[]>([])
-  const [patientsLoading, setPatientsLoading] = useState(false)
 
   const selectedWard = wards.find((w) => w.id === selectedWardId)
 
@@ -92,23 +81,7 @@ export function AdmissionClient() {
     if (selectedWardId) loadAdmissionStatus(selectedWardId)
   }, [selectedWardId, loadAdmissionStatus])
 
-  // Load available patients when assign modal opens
-  const loadAvailablePatients = useCallback(async () => {
-    setPatientsLoading(true)
-    try {
-      const data = await apiGet<AvailablePatient[]>("/proxy/patients/available")
-      setAvailablePatients(data)
-    } finally {
-      setPatientsLoading(false)
-    }
-  }, [])
-
-  function handleAssignClick(bed: BedAdmission) {
-    setAssignBed(bed)
-    loadAvailablePatients()
-  }
-
-  async function handleAdmit(patient: AvailablePatient) {
+  async function handleAdmit(patient: { id: string }) {
     if (!assignBed) return
     await apiPost(`/proxy/patients/${patient.id}/admit`, { bed_id: assignBed.id })
     setAssignBed(null)
@@ -229,7 +202,7 @@ export function AdmissionClient() {
                       return (
                         <div
                           key={bed.id}
-                          onClick={() => handleAssignClick(bed)}
+                          onClick={() => setAssignBed(bed)}
                           className="rounded-lg bg-[#f9fafb] border border-dashed border-[#d1d5db] px-3 py-2.5 h-[72px] cursor-pointer hover:bg-[#f4f5f7] transition-colors flex flex-col items-center justify-center"
                         >
                           <span className="text-[12px] font-semibold text-muted-foreground">
@@ -281,17 +254,7 @@ export function AdmissionClient() {
         onOpenChange={(open) => { if (!open) setAssignBed(null) }}
         bedId={assignBed?.label ?? ""}
         wardName={selectedWard?.name ?? ""}
-        availablePatients={availablePatients.map((p) => ({
-          id: p.id,
-          mrn: p.medical_record_number,
-          name: p.name,
-          dob: p.date_of_birth ?? "",
-        }))}
-        onAdmit={(patient) => {
-          const found = availablePatients.find((p) => p.id === patient.id)
-          if (found) handleAdmit(found)
-        }}
-        loading={patientsLoading}
+        onAdmit={(patient) => handleAdmit(patient)}
       />
     </div>
   )

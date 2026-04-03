@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useRef, useCallback, useEffect } from "react"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import {
   Dialog,
@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { apiGet } from "@/services/api"
 
 type AvailablePatient = {
   id: string
@@ -16,14 +17,24 @@ type AvailablePatient = {
   dob: string
 }
 
+interface CursorPage {
+  items: Array<{
+    id: string
+    name: string
+    medical_record_number: string
+    date_of_birth: string | null
+    gender: string | null
+  }>
+  next_cursor: string | null
+  has_more: boolean
+}
+
 type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
   bedId: string
   wardName?: string
-  availablePatients: AvailablePatient[]
   onAdmit?: (patient: AvailablePatient) => void
-  loading?: boolean
 }
 
 export function AssignPatientModal({
@@ -31,38 +42,110 @@ export function AssignPatientModal({
   onOpenChange,
   bedId,
   wardName = "Surgery",
-  availablePatients,
   onAdmit,
-  loading = false,
 }: Props) {
   const [search, setSearch] = useState("")
+  const [debouncedSearch, setDebouncedSearch] = useState("")
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [patients, setPatients] = useState<AvailablePatient[]>([])
+  const [loading, setLoading] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [hasMore, setHasMore] = useState(false)
+  const observerRef = useRef<HTMLDivElement | null>(null)
 
-  const filtered = useMemo(() => {
-    if (!search) return availablePatients
-    const q = search.toLowerCase()
-    return availablePatients.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.mrn.toLowerCase().includes(q)
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300)
+    return () => clearTimeout(timer)
+  }, [search])
+
+  // Fetch patients (initial or search change)
+  const fetchPatients = useCallback(async (searchTerm: string) => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams({ limit: "20" })
+      if (searchTerm) params.set("search", searchTerm)
+      const data = await apiGet<CursorPage>(`/proxy/patients/available?${params}`)
+      setPatients(data.items.map((p) => ({
+        id: p.id,
+        mrn: p.medical_record_number,
+        name: p.name,
+        dob: p.date_of_birth ?? "",
+      })))
+      setNextCursor(data.next_cursor)
+      setHasMore(data.has_more)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // Fetch more patients (infinite scroll)
+  const fetchMore = useCallback(async () => {
+    if (!nextCursor || loadingMore) return
+    setLoadingMore(true)
+    try {
+      const params = new URLSearchParams({ limit: "20", cursor: nextCursor })
+      if (debouncedSearch) params.set("search", debouncedSearch)
+      const data = await apiGet<CursorPage>(`/proxy/patients/available?${params}`)
+      setPatients((prev) => [
+        ...prev,
+        ...data.items.map((p) => ({
+          id: p.id,
+          mrn: p.medical_record_number,
+          name: p.name,
+          dob: p.date_of_birth ?? "",
+        })),
+      ])
+      setNextCursor(data.next_cursor)
+      setHasMore(data.has_more)
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [nextCursor, loadingMore, debouncedSearch])
+
+  // Load on open & search change
+  useEffect(() => {
+    if (open) fetchPatients(debouncedSearch)
+  }, [open, debouncedSearch, fetchPatients])
+
+  // IntersectionObserver for infinite scroll
+  useEffect(() => {
+    const el = observerRef.current
+    if (!el || !hasMore) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) fetchMore()
+      },
+      { threshold: 0.1 }
     )
-  }, [search, availablePatients])
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hasMore, fetchMore])
 
-  const selectedPatient = availablePatients.find((p) => p.id === selectedId) ?? null
+  const selectedPatient = patients.find((p) => p.id === selectedId) ?? null
 
   function handleAdmit() {
     if (selectedPatient) {
       onAdmit?.(selectedPatient)
       onOpenChange(false)
-      setSelectedId(null)
-      setSearch("")
+      resetState()
     }
   }
 
   function handleCancel() {
     onOpenChange(false)
+    resetState()
+  }
+
+  function resetState() {
     setSelectedId(null)
     setSearch("")
+    setDebouncedSearch("")
+    setPatients([])
+    setNextCursor(null)
+    setHasMore(false)
   }
 
   return (
@@ -116,42 +199,52 @@ export function AssignPatientModal({
             <div className="space-y-1.5 max-h-[260px] overflow-y-auto">
               {loading ? (
                 <p className="text-[14px] text-[#9ca3af] text-center py-6">Loading patients...</p>
-              ) : filtered.length === 0 ? (
+              ) : patients.length === 0 ? (
                 <p className="text-[14px] text-[#9ca3af] text-center py-6">No patients found</p>
               ) : (
-                filtered.map((patient) => {
-                  const isSelected = patient.id === selectedId
-                  return (
-                    <button
-                      key={patient.id}
-                      onClick={() => setSelectedId(patient.id)}
-                      className={[
-                        "w-full flex items-center gap-3 px-3 py-3 rounded-[8px] border text-left transition-colors",
-                        isSelected
-                          ? "bg-[#eff6ff] border-2 border-[#2563eb]"
-                          : "bg-white border border-[#e5e7eb] hover:bg-[#f9fafb]",
-                      ].join(" ")}
-                    >
-                      {/* Radio indicator */}
-                      <div
+                <>
+                  {patients.map((patient) => {
+                    const isSelected = patient.id === selectedId
+                    return (
+                      <button
+                        key={patient.id}
+                        onClick={() => setSelectedId(patient.id)}
                         className={[
-                          "size-[18px] rounded-full border-2 flex items-center justify-center shrink-0",
-                          isSelected ? "border-[#2563eb]" : "border-[#d1d5db]",
+                          "w-full flex items-center gap-3 px-3 py-3 rounded-[8px] border text-left transition-colors",
+                          isSelected
+                            ? "bg-[#eff6ff] border-2 border-[#2563eb]"
+                            : "bg-white border border-[#e5e7eb] hover:bg-[#f9fafb]",
                         ].join(" ")}
                       >
-                        {isSelected && (
-                          <div className="size-[8px] rounded-full bg-[#2563eb]" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-[14px] font-semibold text-[#111827]">{patient.name}</p>
-                        <p className="text-[12px] text-[#9ca3af]">
-                          {patient.mrn}&nbsp;&nbsp;|&nbsp;&nbsp;DOB: {patient.dob}
-                        </p>
-                      </div>
-                    </button>
-                  )
-                })
+                        {/* Radio indicator */}
+                        <div
+                          className={[
+                            "size-[18px] rounded-full border-2 flex items-center justify-center shrink-0",
+                            isSelected ? "border-[#2563eb]" : "border-[#d1d5db]",
+                          ].join(" ")}
+                        >
+                          {isSelected && (
+                            <div className="size-[8px] rounded-full bg-[#2563eb]" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-[14px] font-semibold text-[#111827]">{patient.name}</p>
+                          <p className="text-[12px] text-[#9ca3af]">
+                            {patient.mrn}&nbsp;&nbsp;|&nbsp;&nbsp;DOB: {patient.dob}
+                          </p>
+                        </div>
+                      </button>
+                    )
+                  })}
+                  {/* Infinite scroll sentinel */}
+                  {hasMore && (
+                    <div ref={observerRef} className="py-3 text-center">
+                      {loadingMore && (
+                        <p className="text-[13px] text-[#9ca3af]">Loading more...</p>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
