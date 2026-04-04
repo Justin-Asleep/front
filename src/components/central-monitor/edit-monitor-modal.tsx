@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { apiGet } from "@/services/api"
 import {
   Dialog,
   DialogContent,
@@ -39,19 +40,20 @@ const LAYOUT_GRID: Record<string, [number, number]> = {
 
 type BedItem = {
   id: string
+  label: string
   patient: string | null
 }
 
 type Slot = {
   position: number
   bedId: string | null
+  bedLabel: string | null
   patient: string | null
 }
 
 export type EditMonitorData = {
   id: string
   name: string
-  hospital: string
   urlKey: string
   layout: string
   status: "Active" | "Inactive"
@@ -74,12 +76,51 @@ export function EditMonitorModal({ open, onOpenChange, monitor, onSubmit }: Prop
   const [copied, setCopied] = useState(false)
   const [bedSearch, setBedSearch] = useState("")
   const [dragBed, setDragBed] = useState<BedItem | null>(null)
+  const [dragSlotPos, setDragSlotPos] = useState<number | null>(null)
+  const [dragOverPos, setDragOverPos] = useState<number | null>(null)
   const [slots, setSlots] = useState<Slot[]>(
-    monitor.slots ?? Array.from({ length: 8 }, (_, i) => ({ position: i + 1, bedId: null, patient: null }))
+    monitor.slots ?? Array.from({ length: 8 }, (_, i) => ({ position: i + 1, bedId: null, bedLabel: null, patient: null }))
   )
-  const [availableBeds] = useState<BedItem[]>(
+  const [availableBeds, setAvailableBeds] = useState<BedItem[]>(
     monitor.availableBeds ?? []
   )
+  const [bedsLoading, setBedsLoading] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  interface CursorData<T> { items: T[]; next_cursor: string | null; has_more: boolean }
+  interface AvailableBedDTO { id: string; label: string; patient_name: string | null }
+
+  const searchBeds = useCallback(async (query: string) => {
+    setBedsLoading(true)
+    try {
+      const assignedIds = new Set(slots.filter((s) => s.bedId).map((s) => s.bedId))
+      const all: BedItem[] = []
+      let cursor: string | null = null
+      do {
+        const params = new URLSearchParams({ limit: "50" })
+        if (cursor) params.set("cursor", cursor)
+        if (query) params.set("search", query)
+        const res = await apiGet<CursorData<AvailableBedDTO>>(`/proxy/monitors/available-beds?${params}`)
+        all.push(
+          ...res.items
+            .filter((b) => !assignedIds.has(b.id))
+            .map((b) => ({ id: b.id, label: b.label, patient: b.patient_name }))
+        )
+        cursor = res.next_cursor
+      } while (cursor)
+      setAvailableBeds(all)
+    } catch (err) {
+      console.error("Failed to search beds:", err)
+    } finally {
+      setBedsLoading(false)
+    }
+  }, [slots])
+
+  function handleBedSearch(value: string) {
+    setBedSearch(value)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => searchBeds(value), 300)
+  }
 
   const [cols, rows] = LAYOUT_GRID[layout] ?? [4, 2]
   const totalSlots = cols * rows
@@ -97,6 +138,7 @@ export function EditMonitorModal({ open, onOpenChange, monitor, onSubmit }: Prop
           ...Array.from({ length: count - prev.length }, (_, i) => ({
             position: prev.length + i + 1,
             bedId: null,
+            bedLabel: null,
             patient: null,
           })),
         ]
@@ -112,17 +154,37 @@ export function EditMonitorModal({ open, onOpenChange, monitor, onSubmit }: Prop
   }
 
   function handleRemoveBed(position: number) {
-    setSlots((prev) =>
-      prev.map((s) => (s.position === position ? { ...s, bedId: null, patient: null } : s))
-    )
+    setSlots((prev) => {
+      const removed = prev.find((s) => s.position === position)
+      if (removed?.bedId) {
+        setAvailableBeds((beds) => [...beds, { id: removed.bedId!, label: removed.bedLabel!, patient: removed.patient }])
+      }
+      return prev.map((s) => (s.position === position ? { ...s, bedId: null, bedLabel: null, patient: null } : s))
+    })
   }
 
   function handleAssignBed(bed: BedItem, position: number) {
+    setAvailableBeds((prev) => prev.filter((b) => b.id !== bed.id))
     setSlots((prev) =>
       prev.map((s) =>
-        s.position === position ? { ...s, bedId: bed.id, patient: bed.patient } : s
+        s.position === position ? { ...s, bedId: bed.id, bedLabel: bed.label, patient: bed.patient } : s
       )
     )
+  }
+
+  function handleSlotDrop(targetPos: number) {
+    if (dragSlotPos === null || dragSlotPos === targetPos) return
+    setSlots((prev) => {
+      const source = prev.find((s) => s.position === dragSlotPos)
+      const target = prev.find((s) => s.position === targetPos)
+      if (!source) return prev
+      return prev.map((s) => {
+        if (s.position === targetPos) return { ...s, bedId: source.bedId, bedLabel: source.bedLabel, patient: source.patient }
+        if (s.position === dragSlotPos) return { ...s, bedId: target?.bedId ?? null, bedLabel: target?.bedLabel ?? null, patient: target?.patient ?? null }
+        return s
+      })
+    })
+    setDragSlotPos(null)
   }
 
   function handleSave() {
@@ -139,11 +201,6 @@ export function EditMonitorModal({ open, onOpenChange, monitor, onSubmit }: Prop
   }
 
   const mappedCount = slots.filter((s) => s.bedId !== null).length
-  const filteredBeds = availableBeds.filter(
-    (b) =>
-      b.id.toLowerCase().includes(bedSearch.toLowerCase()) ||
-      (b.patient ?? "").toLowerCase().includes(bedSearch.toLowerCase())
-  )
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -203,13 +260,6 @@ export function EditMonitorModal({ open, onOpenChange, monitor, onSubmit }: Prop
               />
             </div>
 
-            {/* Hospital (read-only) */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[13px] text-[#9ca3af]">Hospital</label>
-              <div className="h-10 bg-[#f9fafb] rounded-lg px-3 flex items-center text-[14px] text-[#4b5563]">
-                {monitor.hospital}
-              </div>
-            </div>
 
             {/* Layout */}
             <div className="flex flex-col gap-1.5">
@@ -302,25 +352,36 @@ export function EditMonitorModal({ open, onOpenChange, monitor, onSubmit }: Prop
                 </div>
                 <Input
                   value={bedSearch}
-                  onChange={(e) => setBedSearch(e.target.value)}
+                  onChange={(e) => handleBedSearch(e.target.value)}
                   placeholder="Search beds..."
                   className="h-8 text-[13px] border-[#e8ebed]"
                 />
                 <div className="flex flex-col gap-1.5 max-h-[300px] overflow-y-auto">
-                  {filteredBeds.length === 0 ? (
+                  {bedsLoading ? (
+                    <p className="text-[13px] text-[#a1a8b2] py-2">Searching...</p>
+                  ) : availableBeds.length === 0 ? (
                     <p className="text-[13px] text-[#a1a8b2] py-2">No beds available</p>
                   ) : (
-                    filteredBeds.map((bed) => (
+                    availableBeds.map((bed) => (
                       <div
                         key={bed.id}
                         draggable
-                        onDragStart={() => setDragBed(bed)}
-                        onDragEnd={() => setDragBed(null)}
+                        onDragStart={(e) => {
+                          setDragBed(bed)
+                          const ghost = e.currentTarget.cloneNode(true) as HTMLElement
+                          ghost.style.width = `${e.currentTarget.offsetWidth}px`
+                          ghost.style.position = "absolute"
+                          ghost.style.top = "-9999px"
+                          document.body.appendChild(ghost)
+                          e.dataTransfer.setDragImage(ghost, 20, 20)
+                          requestAnimationFrame(() => document.body.removeChild(ghost))
+                        }}
+                        onDragEnd={() => { setDragBed(null); setDragOverPos(null) }}
                         className="flex items-center gap-2 h-11 bg-white border border-[#e8ebed] rounded-lg px-2 cursor-grab active:cursor-grabbing hover:bg-[#f7faff]"
                       >
                         <GripVerticalIcon className="size-4 text-[#a1a8b2] shrink-0" />
                         <div>
-                          <p className="text-[13px] font-medium text-[#38404a]">Bed {bed.id}</p>
+                          <p className="text-[13px] font-medium text-[#38404a]">{bed.label}</p>
                           <p className="text-[12px] text-[#a1a8b2]">
                             {bed.patient ?? "(Empty)"}
                           </p>
@@ -347,10 +408,38 @@ export function EditMonitorModal({ open, onOpenChange, monitor, onSubmit }: Prop
                     slot.bedId ? (
                       <div
                         key={slot.position}
-                        className="bg-[#f7faff] border border-[#bad1f5] rounded-lg p-2 flex flex-col gap-1 min-h-[96px]"
+                        draggable
+                        onDragStart={(e) => {
+                          setDragSlotPos(slot.position)
+                          const ghost = e.currentTarget.cloneNode(true) as HTMLElement
+                          ghost.style.width = `${e.currentTarget.offsetWidth}px`
+                          ghost.style.position = "absolute"
+                          ghost.style.top = "-9999px"
+                          document.body.appendChild(ghost)
+                          e.dataTransfer.setDragImage(ghost, 20, 20)
+                          requestAnimationFrame(() => document.body.removeChild(ghost))
+                        }}
+                        onDragEnd={() => { setDragSlotPos(null); setDragOverPos(null) }}
+                        onDragOver={(e) => { e.preventDefault(); setDragOverPos(slot.position) }}
+                        onDragLeave={() => setDragOverPos((prev) => prev === slot.position ? null : prev)}
+                        onDrop={() => {
+                          if (dragBed) {
+                            handleAssignBed(dragBed, slot.position)
+                            setDragBed(null)
+                          } else if (dragSlotPos !== null) {
+                            handleSlotDrop(slot.position)
+                          }
+                          setDragOverPos(null)
+                        }}
+                        className={cn(
+                          "rounded-lg p-2 flex flex-col gap-1 min-h-[96px] cursor-grab active:cursor-grabbing transition-colors",
+                          dragOverPos === slot.position && dragSlotPos !== null
+                            ? "bg-[#eff6ff] border-2 border-dashed border-[#2563eb] scale-[1.02]"
+                            : "bg-[#f7faff] border border-[#bad1f5]"
+                        )}
                       >
                         <p className="text-[10px] text-[#a1a8b2]">Position {slot.position}</p>
-                        <p className="text-[13px] font-medium text-[#2563eb]">Bed {slot.bedId}</p>
+                        <p className="text-[13px] font-medium text-[#2563eb]">{slot.bedLabel}</p>
                         <p className="text-[12px] text-[#6b737d]">{slot.patient ?? "(Empty)"}</p>
                         <button
                           onClick={() => handleRemoveBed(slot.position)}
@@ -362,17 +451,32 @@ export function EditMonitorModal({ open, onOpenChange, monitor, onSubmit }: Prop
                     ) : (
                       <div
                         key={slot.position}
-                        onDragOver={(e) => e.preventDefault()}
+                        onDragOver={(e) => { e.preventDefault(); setDragOverPos(slot.position) }}
+                        onDragLeave={() => setDragOverPos((prev) => prev === slot.position ? null : prev)}
                         onDrop={() => {
                           if (dragBed) {
                             handleAssignBed(dragBed, slot.position)
                             setDragBed(null)
+                          } else if (dragSlotPos !== null) {
+                            handleSlotDrop(slot.position)
                           }
+                          setDragOverPos(null)
                         }}
-                        className="bg-[#fafafa] border border-dashed border-[#e8ebed] rounded-lg p-2 flex flex-col items-center justify-center gap-1 min-h-[96px] text-center"
+                        className={cn(
+                          "rounded-lg p-2 flex flex-col items-center justify-center gap-1 min-h-[96px] text-center transition-colors",
+                          dragOverPos === slot.position && (dragBed || dragSlotPos !== null)
+                            ? "bg-[#eff6ff] border-2 border-dashed border-[#2563eb] scale-[1.02]"
+                            : "bg-[#fafafa] border border-dashed border-[#e8ebed]"
+                        )}
                       >
                         <p className="text-[10px] text-[#a1a8b2]">Position {slot.position}</p>
-                        <p className="text-[12px] text-[#a1a8b2]">Drop bed here</p>
+                        {dragOverPos === slot.position && dragBed ? (
+                          <p className="text-[12px] font-medium text-[#2563eb]">{dragBed.label}</p>
+                        ) : dragOverPos === slot.position && dragSlotPos !== null ? (
+                          <p className="text-[12px] font-medium text-[#2563eb]">Move here</p>
+                        ) : (
+                          <p className="text-[12px] text-[#a1a8b2]">Drop bed here</p>
+                        )}
                       </div>
                     )
                   )}

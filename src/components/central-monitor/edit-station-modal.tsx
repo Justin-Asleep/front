@@ -10,29 +10,14 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
-
-const WARD_OPTIONS = [
-  { value: "internal-medicine", label: "Internal Medicine" },
-  { value: "surgery", label: "Surgery" },
-  { value: "icu", label: "ICU" },
-  { value: "emergency", label: "Emergency" },
-  { value: "pediatrics", label: "Pediatrics" },
-]
 
 type Station = {
   id: string
   name: string
-  hospital: string
-  ward: string
+  wardId: string
+  wardName: string
   urlKey: string
   status: "Active" | "Inactive"
 }
@@ -41,12 +26,11 @@ type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
   station: Station
-  onSubmit?: (data: { name: string; ward: string; status: "Active" | "Inactive" }) => void
+  onSubmit?: (data: { name: string; status: "Active" | "Inactive" }) => void
 }
 
 export function EditStationModal({ open, onOpenChange, station, onSubmit }: Props) {
   const [name, setName] = useState(station.name)
-  const [ward, setWard] = useState(station.ward)
   const [active, setActive] = useState(station.status === "Active")
   const [copied, setCopied] = useState(false)
 
@@ -57,14 +41,13 @@ export function EditStationModal({ open, onOpenChange, station, onSubmit }: Prop
   }
 
   function handleSave() {
-    if (!name.trim() || !ward) return
-    onSubmit?.({ name: name.trim(), ward, status: active ? "Active" : "Inactive" })
+    if (!name.trim()) return
+    onSubmit?.({ name: name.trim(), status: active ? "Active" : "Inactive" })
     onOpenChange(false)
   }
 
   function handleCancel() {
     setName(station.name)
-    setWard(station.ward)
     setActive(station.status === "Active")
     onOpenChange(false)
   }
@@ -110,31 +93,12 @@ export function EditStationModal({ open, onOpenChange, station, onSubmit }: Prop
             />
           </div>
 
-          {/* Hospital (read-only) */}
+          {/* Ward (read-only) */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] text-[#a1a8b2]">Hospital</label>
+            <label className="text-[13px] text-[#a1a8b2]">Ward</label>
             <div className="h-10 bg-[#f7f7f7] rounded-lg px-3 flex items-center text-[14px] text-[#6b737d]">
-              {station.hospital}
+              {station.wardName}
             </div>
-          </div>
-
-          {/* Ward */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] text-[#6b737d]">
-              Ward <span className="text-[#2563eb]">*</span>
-            </label>
-            <Select value={ward} onValueChange={(val) => { if (val) setWard(val) }}>
-              <SelectTrigger className="h-10 w-full rounded-lg border-[#d6d9db] text-[14px] text-[#38404a]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {WARD_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           {/* URL Key (read-only + copy) */}
@@ -190,7 +154,7 @@ export function EditStationModal({ open, onOpenChange, station, onSubmit }: Prop
             </Button>
             <Button
               onClick={handleSave}
-              disabled={!name.trim() || !ward}
+              disabled={!name.trim()}
               className="h-10 w-[140px] bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[14px] font-medium"
             >
               Save Changes
