@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { ViewDetailModal } from "@/components/patients/view-detail-modal"
 import { AssignPatientModal } from "@/components/patients/assign-patient-modal"
 import { apiGet, apiPost } from "@/services/api"
+import { useConfirm } from "@/components/ui/confirm"
 
 interface EncounterWithPatient {
   encounter_id: string
@@ -43,8 +44,47 @@ interface PaginatedData<T> {
   size: number
 }
 
+interface EncounterDetailResponse {
+  encounter_id: string
+  patient_id: string
+  patient_name: string
+  patient_mrn: string
+  patient_gender: string | null
+  admitted_at: string
+  status: string
+  bed_label: string
+  room_name: string
+  ward_name: string
+  vitals: {
+    hr: number | null
+    spo2: number | null
+    rr: number | null
+    temp: number | null
+    bp_systolic: number | null
+    bp_diastolic: number | null
+    measured_at: string | null
+  }
+  latest_alarm: string | null
+}
+
+interface PatientDetail {
+  mrn: string
+  name: string
+  gender: string
+  admittedDate: string
+  bed: string
+  ward: string
+  room: string
+  attending: string
+  status: "Normal" | "Warning" | "Critical"
+  vitals: { hr: number; spo2: number; rr: number; temp: number; bp: string }
+  vitalsUpdated?: string
+  alarmNote?: string
+}
+
 export function AdmissionClient() {
   const router = useRouter()
+  const confirm = useConfirm()
   const [wards, setWards] = useState<WardDTO[]>([])
   const [selectedWardId, setSelectedWardId] = useState<string | null>(null)
   const [rooms, setRooms] = useState<RoomAdmission[]>([])
@@ -52,6 +92,7 @@ export function AdmissionClient() {
 
   const [viewBed, setViewBed] = useState<BedAdmission | null>(null)
   const [viewRoom, setViewRoom] = useState<RoomAdmission | null>(null)
+  const [patientDetail, setPatientDetail] = useState<PatientDetail | null>(null)
   const [assignBed, setAssignBed] = useState<BedAdmission | null>(null)
 
   const selectedWard = wards.find((w) => w.id === selectedWardId)
@@ -86,6 +127,42 @@ export function AdmissionClient() {
     await apiPost(`/proxy/patients/${patient.id}/admit`, { bed_id: assignBed.id })
     setAssignBed(null)
     if (selectedWardId) loadAdmissionStatus(selectedWardId)
+  }
+
+  async function handleViewBed(bed: BedAdmission, room: RoomAdmission) {
+    if (!bed.encounter) return
+    setViewBed(bed)
+    setViewRoom(room)
+    try {
+      const detail = await apiGet<EncounterDetailResponse>(
+        `/proxy/patients/encounters/${bed.encounter.encounter_id}/detail`
+      )
+      const bp = detail.vitals.bp_systolic && detail.vitals.bp_diastolic
+        ? `${Math.round(detail.vitals.bp_systolic)}/${Math.round(detail.vitals.bp_diastolic)}`
+        : "-/-"
+      setPatientDetail({
+        mrn: detail.patient_mrn,
+        name: detail.patient_name,
+        gender: detail.patient_gender ?? "",
+        admittedDate: detail.admitted_at.split("T")[0],
+        bed: detail.bed_label,
+        ward: detail.ward_name,
+        room: `Room ${detail.room_name}`,
+        attending: "",
+        status: detail.latest_alarm ? "Warning" : "Normal",
+        vitals: {
+          hr: detail.vitals.hr ?? 0,
+          spo2: detail.vitals.spo2 ?? 0,
+          rr: detail.vitals.rr ?? 0,
+          temp: detail.vitals.temp ?? 0,
+          bp,
+        },
+        vitalsUpdated: detail.vitals.measured_at?.split(".")[0].replace("T", " ") ?? "",
+        alarmNote: detail.latest_alarm ?? "No active alarms",
+      })
+    } catch (err) {
+      console.error("Failed to load encounter detail:", err)
+    }
   }
 
   // Stats
@@ -183,7 +260,7 @@ export function AdmissionClient() {
                         return (
                           <div
                             key={bed.id}
-                            onClick={() => { setViewBed(bed); setViewRoom(room) }}
+                            onClick={() => handleViewBed(bed, room)}
                             className="rounded-lg bg-[#f2f6fe] border border-[#c7d1fa] border-l-[3px] border-l-[#2563eb] px-3 py-2.5 h-[72px] cursor-pointer hover:shadow-md transition-shadow"
                           >
                             <span className="text-[12px] font-semibold text-[#2563eb]">
@@ -225,27 +302,34 @@ export function AdmissionClient() {
       {/* View Detail Modal */}
       <ViewDetailModal
         open={viewBed !== null}
-        onOpenChange={(open) => { if (!open) { setViewBed(null); setViewRoom(null) } }}
+        onOpenChange={(open) => { if (!open) { setViewBed(null); setViewRoom(null); setPatientDetail(null) } }}
         onMeasurementHistory={() => {
           const mrn = viewBed?.encounter?.patient_mrn ?? ""
           setViewBed(null)
           setViewRoom(null)
+          setPatientDetail(null)
           router.push(`/patients/measurement?mrn=${mrn}`)
         }}
-        patient={viewBed?.encounter ? {
-          mrn: viewBed.encounter.patient_mrn,
-          name: viewBed.encounter.patient_name,
-          gender: "",
-          admittedDate: viewBed.encounter.admitted_at.split("T")[0],
-          bed: viewBed.label,
-          ward: selectedWard?.name ?? "",
-          room: viewRoom ? `Room ${viewRoom.name}` : "",
-          attending: "",
-          status: "Normal",
-          vitals: { hr: 0, spo2: 0, rr: 0, temp: 0, bp: "-/-" },
-          vitalsUpdated: "",
-          alarmNote: "No active alarms",
-        } : null}
+        onDischarge={async () => {
+          if (!viewBed?.encounter?.encounter_id) return
+          const ok = await confirm({
+            title: "Discharge Patient",
+            description: `Are you sure you want to discharge ${viewBed.encounter.patient_name}?`,
+            confirmText: "Discharge",
+            variant: "danger",
+          })
+          if (!ok) return
+          try {
+            await apiPost(`/proxy/patients/encounters/${viewBed.encounter.encounter_id}/discharge`)
+            setViewBed(null)
+            setViewRoom(null)
+            setPatientDetail(null)
+            if (selectedWardId) loadAdmissionStatus(selectedWardId)
+          } catch (err) {
+            console.error("Failed to discharge:", err)
+          }
+        }}
+        patient={patientDetail}
       />
 
       {/* Assign Patient Modal */}

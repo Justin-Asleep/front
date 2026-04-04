@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Noto_Sans_KR } from "next/font/google";
 import { AuthProvider } from "@/providers/auth";
 import { Toaster } from "@/components/ui/toaster";
+import { ConfirmProvider } from "@/components/ui/confirm";
 import "./globals.css";
 
 const inter = Inter({
@@ -30,7 +31,9 @@ export default function RootLayout({
       className={`${inter.variable} ${notoSansKR.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <ConfirmProvider>{children}</ConfirmProvider>
+        </AuthProvider>
         <Toaster />
       </body>
     </html>

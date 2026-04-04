@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils"
 import { Switch } from "@/components/ui/switch"
 import { Copy, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
+import { QRCodeSVG } from "qrcode.react"
 
 interface BedOption {
   id: string
@@ -108,6 +109,19 @@ export function EditTabletModal({ open, onOpenChange, tablet, beds, onSave }: Pr
                 </button>
               </div>
             </div>
+
+            <div className="flex justify-center py-2">
+              <div className="bg-white p-3 rounded-lg border border-[#e5e7eb]">
+                <QRCodeSVG
+                  value={`${tablet?.serial_number}:${newSecret}`}
+                  size={160}
+                  level="M"
+                />
+              </div>
+            </div>
+            <p className="text-center text-[11px] text-[#9ca3af]">
+              Scan to register device token
+            </p>
 
             <div className="flex items-start gap-2 bg-[#fffbeb] rounded-lg px-3 py-2.5">
               <div className="mt-0.5 size-2 rounded-full bg-[#ca8a04] shrink-0" />

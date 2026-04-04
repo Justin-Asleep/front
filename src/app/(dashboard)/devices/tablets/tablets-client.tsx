@@ -160,7 +160,9 @@ export function TabletsClient() {
         }
       )
       toast.success("Tablet updated")
-      fetchTablets(currentPage)
+      if (!data.resetSecret) {
+        fetchTablets(currentPage)
+      }
       return result
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } }
@@ -346,7 +348,7 @@ export function TabletsClient() {
 
       <EditTabletModal
         open={editOpen}
-        onOpenChange={setEditOpen}
+        onOpenChange={(open) => { setEditOpen(open); if (!open) fetchTablets(currentPage) }}
         tablet={selectedTablet ? {
           id: selectedTablet.id,
           serial_number: selectedTablet.serial_number,
