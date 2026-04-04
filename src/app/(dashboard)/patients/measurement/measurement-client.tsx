@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useState, useTransition } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
@@ -125,9 +125,7 @@ function groupObservationsByTime(observations: ObservationItem[]) {
 }
 
 function extractSparklineData(observations: ObservationItem[], type: string): number[] {
-  return observations
-    .filter((o) => o.type === type && o.value !== null)
-    .map((o) => o.value!)
+  return observations.flatMap((o) => o.type === type && o.value != null ? [o.value] : [])
 }
 
 function formatVitalValue(vitals: VitalsDTO, key: string): string {
@@ -148,6 +146,7 @@ export function MeasurementClient() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeRange, setActiveRange] = useState<TimeRange>("1H")
+  const [isPending, startTransition] = useTransition()
 
   const fetchData = useCallback(async (range: TimeRange) => {
     if (!mrn) return
@@ -171,7 +170,7 @@ export function MeasurementClient() {
   }, [activeRange, fetchData])
 
   function handleRangeChange(range: TimeRange) {
-    setActiveRange(range)
+    startTransition(() => setActiveRange(range))
   }
 
   const W = 182

@@ -4,8 +4,16 @@ import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { ViewDetailModal } from "@/components/patients/view-detail-modal"
-import { AssignPatientModal } from "@/components/patients/assign-patient-modal"
+import dynamic from "next/dynamic"
+
+const ViewDetailModal = dynamic(
+  () => import("@/components/patients/view-detail-modal").then((m) => ({ default: m.ViewDetailModal })),
+  { ssr: false }
+)
+const AssignPatientModal = dynamic(
+  () => import("@/components/patients/assign-patient-modal").then((m) => ({ default: m.AssignPatientModal })),
+  { ssr: false }
+)
 import { apiGet, apiPost } from "@/services/api"
 import { useConfirm } from "@/components/ui/confirm"
 

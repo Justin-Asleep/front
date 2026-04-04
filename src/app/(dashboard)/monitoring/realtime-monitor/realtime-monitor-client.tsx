@@ -1,104 +1,74 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
+import { apiGet } from "@/services/api"
+import { SearchableSelect } from "@/components/ui/searchable-select"
 
-type VitalSign = {
-  label: string
-  value: string
-  unit: string
-  color: string
-}
-
-type BedData = {
-  id: string
-  bed: string
-  patient: string
-  vitals: VitalSign[]
-  hasAlarm?: boolean
-}
-
-type Monitor = {
+// ── Types ──────────────────────────────────────────────────────────────────────
+interface MonitorListItem {
   id: string
   name: string
-  beds: BedData[]
+  layout: string
+  is_active: boolean
 }
 
-const monitors: Monitor[] = [
-  {
-    id: "m1",
-    name: "ICU Monitor",
-    beds: [
-      {
-        id: "1", bed: "Bed 301-1", patient: "Kim Minjun",
-        vitals: [
-          { label: "HR", value: "72", unit: "bpm", color: "text-[#22c55e]" },
-          { label: "SpO2", value: "98", unit: "%", color: "text-[#38bdf8]" },
-          { label: "RR", value: "16", unit: "/min", color: "text-[#fbbf24]" },
-          { label: "Temp", value: "36.5", unit: "C", color: "text-[#a78bfb]" },
-          { label: "BP", value: "120/80", unit: "mmHg", color: "text-[#f87171]" },
-        ],
-      },
-      {
-        id: "2", bed: "Bed 301-2", patient: "Park Soyeon",
-        vitals: [
-          { label: "HR", value: "88", unit: "bpm", color: "text-[#22c55e]" },
-          { label: "SpO2", value: "95", unit: "%", color: "text-[#38bdf8]" },
-          { label: "RR", value: "20", unit: "/min", color: "text-[#fbbf24]" },
-          { label: "Temp", value: "37.2", unit: "C", color: "text-[#a78bfb]" },
-          { label: "BP", value: "135/85", unit: "mmHg", color: "text-[#f87171]" },
-        ],
-      },
-      {
-        id: "3", bed: "Bed 301-3", patient: "Lee Jungho",
-        vitals: [
-          { label: "HR", value: "65", unit: "bpm", color: "text-[#22c55e]" },
-          { label: "SpO2", value: "99", unit: "%", color: "text-[#38bdf8]" },
-          { label: "RR", value: "14", unit: "/min", color: "text-[#fbbf24]" },
-          { label: "Temp", value: "36.8", unit: "C", color: "text-[#a78bfb]" },
-          { label: "BP", value: "118/76", unit: "mmHg", color: "text-[#f87171]" },
-        ],
-      },
-      {
-        id: "4", bed: "Bed 302-1", patient: "Choi Yuna", hasAlarm: true,
-        vitals: [
-          { label: "HR", value: "102", unit: "bpm", color: "text-[#22c55e]" },
-          { label: "SpO2", value: "92", unit: "%", color: "text-[#38bdf8]" },
-          { label: "RR", value: "24", unit: "/min", color: "text-[#fbbf24]" },
-          { label: "Temp", value: "38.1", unit: "C", color: "text-[#a78bfb]" },
-          { label: "BP", value: "145/92", unit: "mmHg", color: "text-[#f87171]" },
-        ],
-      },
-    ],
-  },
-  {
-    id: "m2",
-    name: "Ward A Monitor",
-    beds: [
-      {
-        id: "5", bed: "Bed 401-1", patient: "Hwang Jiwoo",
-        vitals: [
-          { label: "HR", value: "68", unit: "bpm", color: "text-[#22c55e]" },
-          { label: "SpO2", value: "99", unit: "%", color: "text-[#38bdf8]" },
-          { label: "RR", value: "15", unit: "/min", color: "text-[#fbbf24]" },
-          { label: "Temp", value: "36.4", unit: "C", color: "text-[#a78bfb]" },
-          { label: "BP", value: "116/74", unit: "mmHg", color: "text-[#f87171]" },
-        ],
-      },
-      {
-        id: "6", bed: "Bed 401-2", patient: "Son Minji",
-        vitals: [
-          { label: "HR", value: "74", unit: "bpm", color: "text-[#22c55e]" },
-          { label: "SpO2", value: "97", unit: "%", color: "text-[#38bdf8]" },
-          { label: "RR", value: "16", unit: "/min", color: "text-[#fbbf24]" },
-          { label: "Temp", value: "36.6", unit: "C", color: "text-[#a78bfb]" },
-          { label: "BP", value: "122/78", unit: "mmHg", color: "text-[#f87171]" },
-        ],
-      },
-    ],
-  },
-]
+interface PaginatedData<T> {
+  items: T[]
+  total: number
+}
 
+interface RealtimeBedVitals {
+  hr: number | null
+  spo2: number | null
+  rr: number | null
+  temp: number | null
+  bp_systolic: number | null
+  bp_diastolic: number | null
+}
+
+interface RealtimeBed {
+  position: number
+  bed_id: string | null
+  bed_label: string | null
+  patient_name: string | null
+  encounter_id: string | null
+  vitals: RealtimeBedVitals | null
+}
+
+interface MonitorRealtime {
+  monitor_id: string
+  monitor_name: string
+  layout: string
+  beds: RealtimeBed[]
+}
+
+// ── Constants ──────────────────────────────────────────────────────────────────
+const VITAL_DEFS = [
+  { key: "hr", label: "HR", unit: "bpm", color: "text-[#22c55e]" },
+  { key: "spo2", label: "SpO2", unit: "%", color: "text-[#38bdf8]" },
+  { key: "rr", label: "RR", unit: "/min", color: "text-[#fbbf24]" },
+  { key: "temp", label: "Temp", unit: "°C", color: "text-[#a78bfb]" },
+  { key: "bp", label: "BP", unit: "mmHg", color: "text-[#f87171]" },
+] as const
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function formatVital(vitals: RealtimeBedVitals | null, key: string): string {
+  if (!vitals) return "--"
+  if (key === "hr") return vitals.hr != null ? String(Math.round(vitals.hr)) : "--"
+  if (key === "spo2") return vitals.spo2 != null ? String(Math.round(vitals.spo2)) : "--"
+  if (key === "rr") return vitals.rr != null ? String(Math.round(vitals.rr)) : "--"
+  if (key === "temp") return vitals.temp != null ? vitals.temp.toFixed(1) : "--"
+  if (key === "bp") return vitals.bp_systolic != null ? `${Math.round(vitals.bp_systolic)}/${Math.round(vitals.bp_diastolic ?? 0)}` : "--"
+  return "--"
+}
+
+function getGridCols(layout: string): number {
+  const cols = parseInt(layout.split("x")[0], 10)
+  return cols || 2
+}
+
+// ── ECG Waveform ──────────────────────────────────────────────────────────────
 function EcgWaveform() {
   return (
     <div className="bg-[#111221] rounded-lg p-3 mt-auto">
@@ -115,73 +85,130 @@ function EcgWaveform() {
   )
 }
 
+// ── Client Component ───────────────────────────────────────────────────────────
 export function RealtimeMonitorClient() {
-  const [selected, setSelected] = useState(monitors[0])
+  const [monitors, setMonitors] = useState<MonitorListItem[]>([])
+  const [selectedId, setSelectedId] = useState("")
+  const [realtimeData, setRealtimeData] = useState<MonitorRealtime | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  // Load monitor list
+  useEffect(() => {
+    async function load() {
+      try {
+        const data = await apiGet<PaginatedData<MonitorListItem>>("/proxy/monitors?page=1&size=100")
+        setMonitors(data.items)
+        if (data.items.length > 0) setSelectedId(data.items[0].id)
+      } catch (err) {
+        console.error("Failed to load monitors:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
+
+  // Load realtime data when monitor selected
+  const fetchRealtime = useCallback(async (monitorId: string) => {
+    if (!monitorId) return
+    try {
+      const data = await apiGet<MonitorRealtime>(`/proxy/monitors/${monitorId}/realtime`)
+      setRealtimeData(data)
+    } catch (err) {
+      console.error("Failed to load realtime data:", err)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (selectedId) fetchRealtime(selectedId)
+  }, [selectedId, fetchRealtime])
+
+  const monitorOptions = monitors.map((m) => ({ value: m.id, label: m.name }))
+  const connectedBeds = realtimeData?.beds.filter((b) => b.encounter_id).length ?? 0
+  const gridCols = realtimeData ? getGridCols(realtimeData.layout) : 2
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-muted-foreground">Loading monitors...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="-m-6 p-6 min-h-full bg-[#f9fafb]">
       <div className="mb-4">
         <h1 className="text-[22px] font-bold tracking-tight text-[#111827]">Realtime Monitor</h1>
-        <p className="text-sm text-[#4b5563]">{selected.name} - {selected.beds.length} beds connected</p>
+        <p className="text-sm text-[#4b5563]">
+          {realtimeData?.monitor_name ?? "Select a monitor"} - {connectedBeds} beds connected
+        </p>
       </div>
 
       {/* Monitor selector */}
       <div className="flex items-center gap-3 mb-4">
-        <div className="relative">
-          <select
-            value={selected.id}
-            onChange={(e) => {
-              const m = monitors.find((m) => m.id === e.target.value)
-              if (m) setSelected(m)
-            }}
-            className="h-9 w-[200px] pl-2.5 pr-7 rounded-lg border border-[#d1d5db] bg-white text-[13px] text-[#4b5563] appearance-none cursor-pointer outline-none"
-          >
-            {monitors.map((m) => (
-              <option key={m.id} value={m.id}>{m.name}</option>
-            ))}
-          </select>
-          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[#a1a8b2]">▾</span>
-        </div>
+        <SearchableSelect
+          value={selectedId}
+          onValueChange={setSelectedId}
+          options={monitorOptions}
+          placeholder="Select monitor..."
+          className="h-9 w-[240px] border-[#d1d5db] text-[13px]"
+        />
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-[#16a34a]" />
-          <span className="text-xs text-[#16a34a]">{selected.beds.length} beds connected</span>
+          <span className="text-xs text-[#16a34a]">{connectedBeds} beds connected</span>
         </div>
       </div>
 
-      {/* 2x2 Grid */}
-      <div className="grid grid-cols-2 gap-5">
-        {selected.beds.map((bed) => (
-          <div
-            key={bed.id}
-            className="bg-[#1a1b2e] rounded-xl shadow-[0px_4px_12px_0px_rgba(0,0,0,0.2)] p-4 flex flex-col min-h-[320px]"
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-[13px] font-semibold text-[#b2b2cc]">{bed.bed}</p>
-              {bed.hasAlarm && (
-                <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444] animate-pulse" />
+      {/* Bed Grid */}
+      {realtimeData ? (
+        <div className="grid gap-5" style={{ gridTemplateColumns: `repeat(${gridCols}, 1fr)` }}>
+          {realtimeData.beds.map((bed) => (
+            <div
+              key={bed.position}
+              className={cn(
+                "rounded-xl shadow-[0px_4px_12px_0px_rgba(0,0,0,0.2)] p-4 flex flex-col min-h-[320px]",
+                bed.encounter_id ? "bg-[#1a1b2e]" : "bg-[#13142a] border border-dashed border-[#2a2b45]"
+              )}
+            >
+              {bed.encounter_id ? (
+                <>
+                  {/* Header */}
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-[13px] font-semibold text-[#b2b2cc]">{bed.bed_label}</p>
+                  </div>
+                  <p className="text-base font-bold text-white mb-4">{bed.patient_name}</p>
+
+                  {/* Vitals */}
+                  <div className="flex items-start gap-6 mb-4">
+                    {VITAL_DEFS.map((v) => (
+                      <div key={v.key}>
+                        <p className="text-[10px] font-semibold text-[#808099] mb-1">{v.label}</p>
+                        <p className={cn("text-[28px] font-bold leading-none", v.color)}>
+                          {formatVital(bed.vitals, v.key)}
+                        </p>
+                        <p className="text-[10px] text-[#808099] mt-1">{v.unit}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* ECG */}
+                  <EcgWaveform />
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full gap-2">
+                  <div className="w-10 h-10 rounded-full border border-dashed border-[#3b3b5c] flex items-center justify-center">
+                    <span className="text-[18px] text-[#3b3b5c]">—</span>
+                  </div>
+                  <p className="text-[13px] font-semibold text-[#4a4a6a]">{bed.bed_label ?? `Position ${bed.position}`}</p>
+                  <p className="text-[11px] text-[#3b3b5c]">Empty Bed</p>
+                </div>
               )}
             </div>
-            <p className="text-base font-bold text-white mb-4">{bed.patient}</p>
-
-            {/* Vitals */}
-            <div className="flex items-start gap-6 mb-4">
-              {bed.vitals.map((vital) => (
-                <div key={vital.label}>
-                  <p className="text-[10px] font-semibold text-[#808099] mb-1">{vital.label}</p>
-                  <p className={cn("text-[28px] font-bold leading-none", vital.color)}>
-                    {vital.value}
-                  </p>
-                  <p className="text-[10px] text-[#808099] mt-1">{vital.unit}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* ECG */}
-            <EcgWaveform />
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 text-[#9ca3af]">Select a monitor to view realtime data</div>
+      )}
     </div>
   )
 }
