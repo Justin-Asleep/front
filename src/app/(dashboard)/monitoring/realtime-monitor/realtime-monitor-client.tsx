@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 import { apiGet } from "@/services/api"
 import { SearchableSelect } from "@/components/ui/searchable-select"
@@ -107,7 +107,7 @@ function BedMonitorCard({ bed }: { bed: RealtimeBed }) {
       {/* ── Top Section: Info + ECG ── */}
       <div className="flex min-h-[140px]">
         {/* Left Column: Patient Info + HR */}
-        <div className="flex flex-col w-[200px] shrink-0 border-r border-[#1e1f35] p-3">
+        <div className="flex flex-col w-[160px] shrink-0 border-r border-[#1e1f35] p-3">
           {/* Monitoring header */}
           <div className="flex items-center gap-1.5 mb-2">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-[#808099]">
@@ -141,26 +141,6 @@ function BedMonitorCard({ bed }: { bed: RealtimeBed }) {
         <div className="flex-1 flex flex-col min-w-0">
           <div className="flex items-center justify-between px-3 pt-2">
             <span className="text-[10px] font-semibold text-[#4ade80]">ECG</span>
-            <div className="flex items-center gap-2">
-              {/* EWS Badge */}
-              {v?.ews != null && (
-                <div className="flex items-center gap-1">
-                  <span className="text-[9px] text-[#808099] font-semibold">EWS</span>
-                  <span className={cn(
-                    "text-[13px] font-bold text-white px-1.5 py-0.5 rounded",
-                    getEwsColor(v.ews)
-                  )}>
-                    {v.ews}
-                  </span>
-                </div>
-              )}
-              {/* Status indicators */}
-              <div className="flex items-center gap-0.5">
-                <span className="w-3 h-5 rounded-sm bg-[#22c55e]" />
-                <span className="w-3 h-5 rounded-sm bg-[#eab308]" />
-                <span className="w-3 h-5 rounded-sm bg-[#dc2626]" />
-              </div>
-            </div>
           </div>
           <div className="flex-1 flex items-center px-2">
             <EcgWaveform className="h-[70px]" />
@@ -237,7 +217,7 @@ function BedMonitorCard({ bed }: { bed: RealtimeBed }) {
         </div>
 
         {/* NBP */}
-        <div className="flex-1 px-2 py-2">
+        <div className="flex-1 border-r border-[#1e1f35] px-2 py-2">
           <div className="flex items-baseline gap-1">
             <span className="text-[10px] font-semibold text-[#f87171]">NBP</span>
             <span className="text-[8px] text-[#555]">mmHg</span>
@@ -252,6 +232,16 @@ function BedMonitorCard({ bed }: { bed: RealtimeBed }) {
               ({Math.round(v.bp_mean)})
             </p>
           )}
+        </div>
+
+        {/* EWS */}
+        <div className="flex-1 px-2 py-2">
+          <div className="flex items-baseline gap-1">
+            <span className="text-[10px] font-semibold text-[#fb923c]">EWS</span>
+          </div>
+          <p className="text-[22px] font-bold leading-none text-[#fb923c] mt-1">
+            {v?.ews != null ? v.ews : "--"}
+          </p>
         </div>
       </div>
     </div>
@@ -300,6 +290,42 @@ export function RealtimeMonitorClient() {
   const connectedBeds = realtimeData?.beds.filter((b) => b.encounter_id).length ?? 0
   const gridCols = realtimeData ? getGridCols(realtimeData.layout) : 2
 
+  // ── Drag-to-scroll ──
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const isDragging = useRef(false)
+  const startX = useRef(0)
+  const startY = useRef(0)
+  const scrollLeft = useRef(0)
+  const scrollTop = useRef(0)
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    const el = scrollRef.current
+    if (!el) return
+    isDragging.current = true
+    startX.current = e.clientX
+    startY.current = e.clientY
+    scrollLeft.current = el.scrollLeft
+    scrollTop.current = el.scrollTop
+    el.style.cursor = "grabbing"
+    el.style.userSelect = "none"
+  }, [])
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDragging.current || !scrollRef.current) return
+    const dx = e.clientX - startX.current
+    const dy = e.clientY - startY.current
+    scrollRef.current.scrollLeft = scrollLeft.current - dx
+    scrollRef.current.scrollTop = scrollTop.current - dy
+  }, [])
+
+  const handleMouseUp = useCallback(() => {
+    isDragging.current = false
+    if (scrollRef.current) {
+      scrollRef.current.style.cursor = "grab"
+      scrollRef.current.style.userSelect = ""
+    }
+  }, [])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -332,12 +358,26 @@ export function RealtimeMonitorClient() {
         </div>
       </div>
 
-      {/* Bed Grid */}
+      {/* Bed Grid — drag-to-scroll when viewport < min content width */}
       {realtimeData ? (
-        <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${gridCols}, 1fr)` }}>
-          {realtimeData.beds.map((bed) => (
-            <BedMonitorCard key={bed.position} bed={bed} />
-          ))}
+        <div
+          ref={scrollRef}
+          className="overflow-auto cursor-grab"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+        >
+          <div
+            className="grid gap-4"
+            style={{
+              gridTemplateColumns: `repeat(${gridCols}, minmax(420px, 1fr))`,
+            }}
+          >
+            {realtimeData.beds.map((bed) => (
+              <BedMonitorCard key={bed.position} bed={bed} />
+            ))}
+          </div>
         </div>
       ) : (
         <div className="text-center py-12 text-[#808099]">Select a monitor to view realtime data</div>
