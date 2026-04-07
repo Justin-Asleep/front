@@ -28,6 +28,7 @@ interface TabletWithBed {
   bed_id: string | null
   serial_number: string
   is_active: boolean
+  is_online: boolean
   bed_label: string | null
   room_name: string | null
   ward_name: string | null
@@ -85,11 +86,18 @@ export function TabletsClient() {
       const wardsData = await apiGet<PaginatedData<{ id: string; name: string }>>(
         "/proxy/wards?page=1&size=100"
       )
+      const roomsResults = await Promise.all(
+        wardsData.items.map((ward) =>
+          apiGet<PaginatedData<{
+            id: string; name: string; beds: { id: string; bed_number: number; label: string }[]
+          }>>(`/proxy/wards/${ward.id}/rooms?page=1&size=100`).then((roomsData) => ({
+            ward,
+            roomsData,
+          }))
+        )
+      )
       const allBeds: BedOption[] = []
-      for (const ward of wardsData.items) {
-        const roomsData = await apiGet<PaginatedData<{
-          id: string; name: string; beds: { id: string; bed_number: number; label: string }[]
-        }>>(`/proxy/wards/${ward.id}/rooms?page=1&size=100`)
+      for (const { ward, roomsData } of roomsResults) {
         for (const room of roomsData.items) {
           for (const bed of room.beds) {
             allBeds.push({
@@ -288,7 +296,7 @@ export function TabletsClient() {
                           <span
                             className={cn(
                               "w-2 h-2 rounded-full flex-shrink-0",
-                              tablet.is_active ? "bg-[#16a34a]" : "bg-[#9ca3af]"
+                              tablet.is_online ? "bg-[#16a34a]" : "bg-[#9ca3af]"
                             )}
                           />
                           <span className="font-medium text-[#111827]">{tablet.serial_number}</span>

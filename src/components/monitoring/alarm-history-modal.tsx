@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useEffect, useCallback } from "react"
 import {
   Dialog,
   DialogContent,
@@ -17,92 +17,139 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
+import { apiGet } from "@/services/api"
 
-type Severity = "CRITICAL" | "WARNING"
+type Severity = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW"
 type TimeFilter = "1H" | "6H" | "24H" | "7D"
-type SeverityFilter = "All" | "Critical" | "Warning"
+type SeverityFilter = "All" | "CRITICAL" | "HIGH"
 
-type AlarmRecord = {
-  id: string
-  severity: Severity
-  bed: string
-  patient: string
+interface AlarmFromAPI {
+  id: number
+  severity: string
   param: string
-  value: string
+  value: number
+  extra_value: number | null
   threshold: string
-  time: string
+  message: string
+  triggered_at: string
+  bed_label: string
+  patient_name: string
 }
 
-const mockHistory: AlarmRecord[] = [
-  { id: "1",  severity: "CRITICAL", bed: "301-2", patient: "Park Soyeon",  param: "SpO2", value: "92%",    threshold: "<94%",   time: "3m ago" },
-  { id: "2",  severity: "CRITICAL", bed: "302-1", patient: "Choi Yuna",    param: "HR",   value: "102",    threshold: ">100",   time: "6m ago" },
-  { id: "3",  severity: "WARNING",  bed: "301-2", patient: "Park Soyeon",  param: "Temp", value: "37.8",   threshold: ">37.5",  time: "9m ago" },
-  { id: "4",  severity: "WARNING",  bed: "302-3", patient: "Jung Hyunwoo", param: "RR",   value: "22",     threshold: ">20",    time: "15m ago" },
-  { id: "5",  severity: "WARNING",  bed: "303-1", patient: "Yoon Jiyeon",  param: "BP",   value: "142/88", threshold: ">140",   time: "20m ago" },
-  { id: "6",  severity: "WARNING",  bed: "302-1", patient: "Choi Yuna",    param: "Temp", value: "38.1",   threshold: ">37.5",  time: "25m ago" },
-  { id: "7",  severity: "WARNING",  bed: "303-4", patient: "Oh Donghyun",  param: "HR",   value: "58",     threshold: "<60",    time: "45m ago" },
-  { id: "8",  severity: "CRITICAL", bed: "301-3", patient: "Lee Jungho",   param: "SpO2", value: "89%",    threshold: "<90%",   time: "1h ago" },
-  { id: "9",  severity: "WARNING",  bed: "302-2", patient: "J. Hyunwoo",   param: "HR",   value: "95",     threshold: ">90",    time: "2h ago" },
-  { id: "10", severity: "WARNING",  bed: "303-3", patient: "Shin Areum",   param: "RR",   value: "21",     threshold: ">20",    time: "3h ago" },
-  { id: "11", severity: "CRITICAL", bed: "301-1", patient: "Kim Minjun",   param: "SpO2", value: "91%",    threshold: "<94%",   time: "4h ago" },
-  { id: "12", severity: "WARNING",  bed: "303-2", patient: "Bae Junho",    param: "Temp", value: "37.6",   threshold: ">37.5",  time: "5h ago" },
-  { id: "13", severity: "WARNING",  bed: "302-4", patient: "Kang Seojun",  param: "HR",   value: "97",     threshold: ">90",    time: "6h ago" },
-  { id: "14", severity: "WARNING",  bed: "301-4", patient: "Han Minji",    param: "RR",   value: "23",     threshold: ">20",    time: "8h ago" },
-  { id: "15", severity: "CRITICAL", bed: "302-1", patient: "Choi Yuna",    param: "HR",   value: "108",    threshold: ">100",   time: "10h ago" },
-  { id: "16", severity: "WARNING",  bed: "303-1", patient: "Yoon Jiyeon",  param: "BP",   value: "138/86", threshold: ">140",   time: "12h ago" },
-  { id: "17", severity: "WARNING",  bed: "301-2", patient: "Park Soyeon",  param: "SpO2", value: "94%",    threshold: "<95%",   time: "14h ago" },
-  { id: "18", severity: "WARNING",  bed: "302-3", patient: "Jung Hyunwoo", param: "Temp", value: "37.7",   threshold: ">37.5",  time: "18h ago" },
-  { id: "19", severity: "CRITICAL", bed: "303-4", patient: "Oh Donghyun",  param: "SpO2", value: "88%",    threshold: "<90%",   time: "22h ago" },
-]
+interface PaginatedAlarms {
+  items: AlarmFromAPI[]
+  total: number
+  page: number
+  size: number
+}
 
 const PAGE_SIZE = 10
 const TIME_FILTERS: TimeFilter[] = ["1H", "6H", "24H", "7D"]
-const SEVERITY_FILTERS: SeverityFilter[] = ["All", "Critical", "Warning"]
+const SEVERITY_FILTERS: SeverityFilter[] = ["All", "CRITICAL", "HIGH"]
 
-const severityBadgeClass: Record<Severity, string> = {
+const severityBadgeClass: Record<string, string> = {
   CRITICAL: "bg-[#fff2f2] text-[#ef4444] border-0 font-bold text-[10px] h-5 px-2 rounded",
-  WARNING:  "bg-[#fff7ed] text-[#f97316] border-0 font-bold text-[10px] h-5 px-2 rounded",
+  HIGH:     "bg-[#fff7ed] text-[#f97316] border-0 font-bold text-[10px] h-5 px-2 rounded",
+  MEDIUM:   "bg-[#fffbeb] text-[#eab308] border-0 font-bold text-[10px] h-5 px-2 rounded",
+  LOW:      "bg-[#f0fdf4] text-[#22c55e] border-0 font-bold text-[10px] h-5 px-2 rounded",
 }
 
-const paramColorBySeverity: Record<Severity, string> = {
+const paramColorBySeverity: Record<string, string> = {
   CRITICAL: "text-[#ef4444]",
-  WARNING:  "text-[#f97316]",
+  HIGH:     "text-[#f97316]",
+  MEDIUM:   "text-[#eab308]",
+  LOW:      "text-[#22c55e]",
 }
 
-const dateRangeLabel: Record<TimeFilter, string> = {
-  "1H":  "2026-03-30 13:00 ~ 14:00",
-  "6H":  "2026-03-30 08:00 ~ 14:00",
-  "24H": "2026-03-29 00:00 ~ 23:59",
-  "7D":  "2026-03-23 ~ 2026-03-30",
+function getTimeRange(filter: TimeFilter): { from: string; to: string; label: string } {
+  const now = new Date()
+  const to = now.toISOString()
+  const from = new Date(now)
+
+  switch (filter) {
+    case "1H":  from.setHours(from.getHours() - 1); break
+    case "6H":  from.setHours(from.getHours() - 6); break
+    case "24H": from.setHours(from.getHours() - 24); break
+    case "7D":  from.setDate(from.getDate() - 7); break
+  }
+
+  const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
+  return { from: from.toISOString(), to, label: `${fmt(from)} ~ ${fmt(now)}` }
+}
+
+function formatValue(alarm: AlarmFromAPI): string {
+  if (alarm.param === "BP" && alarm.extra_value != null) {
+    return `${Math.round(alarm.value)}/${Math.round(alarm.extra_value)}`
+  }
+  if (alarm.param === "TEMP") return alarm.value.toFixed(1)
+  return String(Math.round(alarm.value))
+}
+
+function formatTime(isoStr: string): string {
+  const diff = Date.now() - new Date(isoStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return "just now"
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
 }
 
 interface AlarmHistoryModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   stationName?: string
+  wardId?: string
 }
 
 export function AlarmHistoryModal({
   open,
   onOpenChange,
-  stationName = "Internal Medicine Station",
+  stationName = "",
+  wardId,
 }: AlarmHistoryModalProps) {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("24H")
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("All")
   const [page, setPage] = useState(1)
+  const [alarms, setAlarms] = useState<AlarmFromAPI[]>([])
+  const [total, setTotal] = useState(0)
+  const [loading, setLoading] = useState(false)
 
-  const filtered = useMemo(() => {
-    if (severityFilter === "All") return mockHistory
-    const target = severityFilter.toUpperCase() as Severity
-    return mockHistory.filter((a) => a.severity === target)
-  }, [severityFilter])
+  const fetchAlarms = useCallback(async () => {
+    setLoading(true)
+    try {
+      const { from, to } = getTimeRange(timeFilter)
+      const params = new URLSearchParams({
+        from,
+        to,
+        page: String(page),
+        size: String(PAGE_SIZE),
+      })
+      if (wardId) params.set("ward_id", wardId)
+      if (severityFilter !== "All") params.set("severity", severityFilter)
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
-  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+      const data = await apiGet<PaginatedAlarms>(`/proxy/alarms?${params}`)
+      setAlarms(data.items)
+      setTotal(data.total)
+    } catch (err) {
+      console.error("Failed to load alarm history:", err)
+      setAlarms([])
+      setTotal(0)
+    } finally {
+      setLoading(false)
+    }
+  }, [timeFilter, severityFilter, page, wardId])
 
-  const criticalCount = mockHistory.filter((a) => a.severity === "CRITICAL").length
-  const warningCount  = mockHistory.filter((a) => a.severity === "WARNING").length
-  const resolvedCount = 12
+  useEffect(() => {
+    if (open) fetchAlarms()
+  }, [open, fetchAlarms])
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const { label: dateRangeLabel } = getTimeRange(timeFilter)
+
+  const criticalCount = alarms.filter((a) => a.severity === "CRITICAL").length
+  const warningCount = alarms.filter((a) => a.severity === "HIGH").length
 
   function handleTimeFilter(f: TimeFilter) {
     setTimeFilter(f)
@@ -117,18 +164,15 @@ export function AlarmHistoryModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[1024px] w-full p-0 gap-0 overflow-hidden" showCloseButton={true}>
-        {/* Header */}
         <DialogHeader className="px-8 pt-5 pb-0 gap-0">
           <DialogTitle className="text-[18px] font-semibold text-[#12171c]">Alarm History</DialogTitle>
           <p className="text-[13px] text-[#6b737d] mt-0.5">{stationName}</p>
         </DialogHeader>
 
-        {/* Separator */}
         <div className="h-px bg-[#e8ebed] mt-3" />
 
         {/* Filter bar */}
         <div className="flex items-center gap-2 px-8 py-2.5">
-          {/* Time filter buttons */}
           {TIME_FILTERS.map((f) => (
             <button
               key={f}
@@ -144,12 +188,10 @@ export function AlarmHistoryModal({
             </button>
           ))}
 
-          {/* Date range */}
           <div className="h-7 flex items-center px-2 rounded-md border border-[#e8ebed] bg-white text-[11px] text-[#38404a] w-[220px]">
-            {dateRangeLabel[timeFilter]}
+            {dateRangeLabel}
           </div>
 
-          {/* Severity filter */}
           <div className="relative">
             <select
               value={severityFilter}
@@ -157,14 +199,13 @@ export function AlarmHistoryModal({
               className="h-7 pl-2 pr-6 rounded-md border border-[#e8ebed] bg-white text-[12px] text-[#38404a] appearance-none cursor-pointer outline-none"
             >
               {SEVERITY_FILTERS.map((f) => (
-                <option key={f} value={f}>{f}</option>
+                <option key={f} value={f}>{f === "All" ? "All" : f}</option>
               ))}
             </select>
             <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[#a1a8b2]">▾</span>
           </div>
         </div>
 
-        {/* Separator */}
         <div className="h-px bg-[#e8ebed]" />
 
         {/* Stats summary */}
@@ -173,14 +214,11 @@ export function AlarmHistoryModal({
           <span className="text-[12px] font-medium text-[#ef4444] mr-6">Critical: {criticalCount}</span>
           <span className="inline-block size-2 rounded-[2px] bg-[#f97316] mr-1.5" />
           <span className="text-[12px] font-medium text-[#f97316] mr-6">Warning: {warningCount}</span>
-          <span className="inline-block size-2 rounded-[2px] bg-[#21c45e] mr-1.5" />
-          <span className="text-[12px] font-medium text-[#21c45e]">Resolved: {resolvedCount}</span>
           <span className="ml-auto text-[12px] text-[#a1a8b2]">
-            Total: {mockHistory.length} alarms in {timeFilter}
+            Total: {total} alarms in {timeFilter}
           </span>
         </div>
 
-        {/* Separator */}
         <div className="h-px bg-[#e8ebed]" />
 
         {/* Table */}
@@ -197,43 +235,59 @@ export function AlarmHistoryModal({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pageItems.map((alarm, idx) => (
-                <TableRow
-                  key={alarm.id}
-                  className={cn(
-                    "border-b border-[#f2f2f5]",
-                    idx % 2 === 0 ? "bg-white" : "bg-[#fafafc]"
-                  )}
-                >
-                  <TableCell className="px-8 py-2.5">
-                    <Badge className={severityBadgeClass[alarm.severity]}>
-                      {alarm.severity}
-                    </Badge>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="px-8 py-8 text-center text-muted-foreground text-[13px]">
+                    Loading...
                   </TableCell>
-                  <TableCell className="px-4 py-2.5 text-[12px] text-[#38404a]">{alarm.bed}</TableCell>
-                  <TableCell className="px-4 py-2.5 text-[12px] text-[#12171c]">{alarm.patient}</TableCell>
-                  <TableCell className="px-4 py-2.5">
-                    <span className={cn("text-[12px] font-medium", paramColorBySeverity[alarm.severity])}>
-                      {alarm.param}
-                    </span>
-                  </TableCell>
-                  <TableCell className="px-4 py-2.5 text-[12px] font-bold text-[#38404a]">
-                    {alarm.value} ({alarm.threshold})
-                  </TableCell>
-                  <TableCell className="px-4 py-2.5 text-[11px] text-[#a1a8b2]">{alarm.time}</TableCell>
                 </TableRow>
-              ))}
+              ) : alarms.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="px-8 py-8 text-center text-muted-foreground text-[13px]">
+                    No alarms found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                alarms.map((alarm, idx) => (
+                  <TableRow
+                    key={alarm.id}
+                    className={cn(
+                      "border-b border-[#f2f2f5]",
+                      idx % 2 === 0 ? "bg-white" : "bg-[#fafafc]"
+                    )}
+                  >
+                    <TableCell className="px-8 py-2.5">
+                      <Badge className={severityBadgeClass[alarm.severity] ?? severityBadgeClass.LOW}>
+                        {alarm.severity}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="px-4 py-2.5 text-[12px] text-[#38404a]">{alarm.bed_label}</TableCell>
+                    <TableCell className="px-4 py-2.5 text-[12px] text-[#12171c]">{alarm.patient_name}</TableCell>
+                    <TableCell className="px-4 py-2.5">
+                      <span className={cn("text-[12px] font-medium", paramColorBySeverity[alarm.severity] ?? "text-[#38404a]")}>
+                        {alarm.param}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-4 py-2.5 text-[12px] font-bold text-[#38404a]">
+                      {formatValue(alarm)} ({alarm.threshold})
+                    </TableCell>
+                    <TableCell className="px-4 py-2.5 text-[11px] text-[#a1a8b2]">{formatTime(alarm.triggered_at)}</TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
 
-        {/* Separator */}
         <div className="h-px bg-[#e8ebed]" />
 
         {/* Footer / Pagination */}
         <div className="flex items-center justify-between px-8 py-3">
           <span className="text-[12px] text-[#a1a8b2]">
-            Showing {Math.min((page - 1) * PAGE_SIZE + 1, filtered.length)}-{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length} alarms
+            {total > 0
+              ? `Showing ${(page - 1) * PAGE_SIZE + 1}-${Math.min(page * PAGE_SIZE, total)} of ${total} alarms`
+              : "No alarms"
+            }
           </span>
           <div className="flex items-center gap-1">
             <button

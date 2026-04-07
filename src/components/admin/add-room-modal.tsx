@@ -17,10 +17,11 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-type RoomType = "SINGLE" | "QUAD" | "HEX"
+type RoomType = "SINGLE" | "DOUBLE" | "QUAD" | "HEX"
 
 const ROOM_TYPE_BEDS: Record<RoomType, number> = {
   SINGLE: 1,
+  DOUBLE: 2,
   QUAD: 4,
   HEX: 6,
 }
@@ -104,6 +105,7 @@ export function AddRoomModal({ open, onOpenChange, ward, onAdd }: AddRoomModalPr
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="SINGLE">SINGLE (1 bed)</SelectItem>
+                <SelectItem value="DOUBLE">DOUBLE (2 beds)</SelectItem>
                 <SelectItem value="QUAD">QUAD (4 beds)</SelectItem>
                 <SelectItem value="HEX">HEX (6 beds)</SelectItem>
               </SelectContent>
@@ -115,7 +117,7 @@ export function AddRoomModal({ open, onOpenChange, ward, onAdd }: AddRoomModalPr
             <div className="mt-0.5 size-2 rounded-full bg-[#2563eb] shrink-0" />
             <div>
               <p className="text-[12px] font-medium text-[#2563eb]">
-                SINGLE = 1 bed&nbsp;&nbsp;|&nbsp;&nbsp;QUAD = 4 beds&nbsp;&nbsp;|&nbsp;&nbsp;HEX = 6 beds
+                SINGLE = 1 bed&nbsp;&nbsp;|&nbsp;&nbsp;DOUBLE = 2 beds&nbsp;&nbsp;|&nbsp;&nbsp;QUAD = 4 beds&nbsp;&nbsp;|&nbsp;&nbsp;HEX = 6 beds
               </p>
               <p className="text-[11px] text-[#4b82f6]">
                 Beds are auto-generated based on room type.

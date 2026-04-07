@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useCallback } from "react"
 import { Combobox } from "@base-ui/react/combobox"
 import { cn } from "@/lib/utils"
 import { ChevronDownIcon, CheckIcon, Search } from "lucide-react"
@@ -17,6 +18,7 @@ interface SearchableSelectProps {
   placeholder?: string
   className?: string
   disabled?: boolean
+  portalContainer?: React.RefObject<HTMLElement | null>
 }
 
 export function SearchableSelect({
@@ -26,15 +28,21 @@ export function SearchableSelect({
   placeholder = "Select...",
   className,
   disabled = false,
+  portalContainer,
 }: SearchableSelectProps) {
   const selectedOption = options.find((o) => o.value === value) ?? null
+
+  const handleValueChange = useCallback(
+    (val: SearchableSelectOption | null) => {
+      if (val) onValueChange(val.value)
+    },
+    [onValueChange]
+  )
 
   return (
     <Combobox.Root
       value={selectedOption}
-      onValueChange={(val) => {
-        if (val) onValueChange((val as SearchableSelectOption).value)
-      }}
+      onValueChange={handleValueChange}
       items={options}
       itemToStringLabel={(item) => (item as SearchableSelectOption).label}
       disabled={disabled}
@@ -55,7 +63,7 @@ export function SearchableSelect({
         />
       </Combobox.Trigger>
 
-      <Combobox.Portal>
+      <Combobox.Portal container={portalContainer?.current}>
         <Combobox.Positioner
           side="bottom"
           sideOffset={4}

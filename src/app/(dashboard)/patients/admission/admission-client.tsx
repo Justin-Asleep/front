@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
@@ -104,16 +104,7 @@ export function AdmissionClient() {
   const [assignBed, setAssignBed] = useState<BedAdmission | null>(null)
 
   const selectedWard = wards.find((w) => w.id === selectedWardId)
-
-  // Load wards on mount
-  useEffect(() => {
-    async function loadWards() {
-      const data = await apiGet<PaginatedData<WardDTO>>("/proxy/wards?page=1&size=100")
-      setWards(data.items)
-      if (data.items.length > 0) setSelectedWardId(data.items[0].id)
-    }
-    loadWards()
-  }, [])
+  const initialLoadDone = useRef(false)
 
   // Load admission status when ward changes
   const loadAdmissionStatus = useCallback(async (wardId: string) => {
@@ -126,7 +117,32 @@ export function AdmissionClient() {
     }
   }, [])
 
+  // Load wards on mount, then immediately fetch rooms for the first ward in parallel
   useEffect(() => {
+    async function loadWardsAndRooms() {
+      const data = await apiGet<PaginatedData<WardDTO>>("/proxy/wards?page=1&size=100")
+      const sorted = [...data.items].sort((a, b) => (a.floor ?? 0) - (b.floor ?? 0))
+      setWards(sorted)
+      if (sorted.length === 0) return
+      const firstWardId = sorted[0].id
+      setLoading(true)
+      try {
+        const [, rooms] = await Promise.all([
+          Promise.resolve(setSelectedWardId(firstWardId)),
+          apiGet<RoomAdmission[]>(`/proxy/wards/${firstWardId}/admission-status`),
+        ])
+        setRooms(rooms)
+      } finally {
+        setLoading(false)
+      }
+      initialLoadDone.current = true
+    }
+    loadWardsAndRooms()
+  }, [])
+
+  // Re-fetch rooms when user switches ward tabs (skip the initial load)
+  useEffect(() => {
+    if (!initialLoadDone.current) return
     if (selectedWardId) loadAdmissionStatus(selectedWardId)
   }, [selectedWardId, loadAdmissionStatus])
 
@@ -262,7 +278,10 @@ export function AdmissionClient() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className={cn(
+                    "grid gap-2",
+                    room.beds.length === 1 ? "grid-cols-1" : "grid-cols-2"
+                  )}>
                     {room.beds.map((bed) => {
                       if (bed.encounter) {
                         return (

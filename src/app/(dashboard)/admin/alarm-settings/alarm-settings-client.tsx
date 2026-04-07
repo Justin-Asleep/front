@@ -1,5 +1,6 @@
 "use client"
 
+import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -11,25 +12,102 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
+import { apiGet, apiPut } from "@/services/api"
+import { toast } from "sonner"
 
-type ThresholdKey = "lowCritical" | "lowWarning" | "highWarning" | "highCritical"
-
-export interface Parameter {
-  name: string
-  unit: string
-  dot: string
-  values: Record<ThresholdKey, string>
-  naFields: ThresholdKey[]
+// ─�� Types ──────────────────────────────────────────���───────────────────────────
+interface AlarmThreshold {
+  id: string
+  hospital_id: string
+  param_type: string
+  critical_low: number | null
+  warning_low: number | null
+  warning_high: number | null
+  critical_high: number | null
 }
 
+type ThresholdKey = "critical_low" | "warning_low" | "warning_high" | "critical_high"
+
+// ── Constants ───────────────────────────────────────────────���──────────────────
+const PARAM_META: Record<string, { name: string; unit: string; dot: string; naFields: ThresholdKey[] }> = {
+  HR:     { name: "Heart Rate (HR)",   unit: "bpm",  dot: "#16a34a", naFields: [] },
+  SPO2:   { name: "SpO2",             unit: "%",    dot: "#3b82f6", naFields: ["warning_high", "critical_high"] },
+  RR:     { name: "Respiratory Rate",  unit: "bpm",  dot: "#f97316", naFields: [] },
+  TEMP:   { name: "Temperature",       unit: "°C",   dot: "#a855f7", naFields: [] },
+  BP_SYS: { name: "BP Systolic",       unit: "mmHg", dot: "#ef4444", naFields: [] },
+  BP_DIA: { name: "BP Diastolic",      unit: "mmHg", dot: "#ef4444", naFields: [] },
+}
+
+const PARAM_ORDER = ["HR", "SPO2", "RR", "TEMP", "BP_SYS", "BP_DIA"]
+
 const thresholdColumns: { key: ThresholdKey; label: string; type: "critical" | "warning" }[] = [
-  { key: "lowCritical", label: "Low Critical", type: "critical" },
-  { key: "lowWarning", label: "Low Warning", type: "warning" },
-  { key: "highWarning", label: "High Warning", type: "warning" },
-  { key: "highCritical", label: "High Critical", type: "critical" },
+  { key: "critical_low",  label: "Low Critical",  type: "critical" },
+  { key: "warning_low",   label: "Low Warning",   type: "warning" },
+  { key: "warning_high",  label: "High Warning",  type: "warning" },
+  { key: "critical_high", label: "High Critical",  type: "critical" },
 ]
 
-export function AlarmSettingsClient({ initialParameters }: { initialParameters: Parameter[] }) {
+// ── Client Component ─────────────���─────────────────────────────────────────────
+export function AlarmSettingsClient() {
+  const [thresholds, setThresholds] = useState<AlarmThreshold[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true)
+      const data = await apiGet<AlarmThreshold[]>("/proxy/alarm-settings")
+      setThresholds(data)
+    } catch (err) {
+      console.error("Failed to load alarm settings:", err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  function handleChange(paramType: string, key: ThresholdKey, value: string) {
+    setThresholds((prev) =>
+      prev.map((t) =>
+        t.param_type === paramType ? { ...t, [key]: value === "" ? null : parseFloat(value) } : t
+      )
+    )
+  }
+
+  async function handleSave() {
+    try {
+      setSaving(true)
+      await apiPut("/proxy/alarm-settings", {
+        thresholds: thresholds.map((t) => ({
+          param_type: t.param_type,
+          critical_low: t.critical_low,
+          warning_low: t.warning_low,
+          warning_high: t.warning_high,
+          critical_high: t.critical_high,
+        })),
+      })
+      toast.success("Alarm settings saved")
+    } catch (err) {
+      console.error("Failed to save:", err)
+      toast.error("Failed to save alarm settings")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-muted-foreground">Loading alarm settings...</p>
+      </div>
+    )
+  }
+
+  const ordered = PARAM_ORDER.map((pt) => thresholds.find((t) => t.param_type === pt)).filter(Boolean) as AlarmThreshold[]
+
   return (
     <div className="space-y-6">
       <div>
@@ -50,59 +128,62 @@ export function AlarmSettingsClient({ initialParameters }: { initialParameters: 
               </TableRow>
             </TableHeader>
             <TableBody>
-              {initialParameters.map((param, idx) => (
-                <TableRow key={param.name} className={cn("h-[92px]", idx % 2 === 0 ? "bg-white" : "bg-[#fcfcfe]")}>
-                  <TableCell className="px-4">
-                    <div className="flex items-start gap-2">
-                      <span
-                        className="w-2.5 h-2.5 rounded-full shrink-0 mt-[3px]"
-                        style={{ backgroundColor: param.dot }}
-                      />
-                      <div className="flex flex-col">
-                        <span className="text-[14px] font-semibold text-[#111827]">{param.name}</span>
-                        <span className="text-[12px] text-[#9ca3af]">{param.unit}</span>
+              {ordered.map((threshold, idx) => {
+                const meta = PARAM_META[threshold.param_type]
+                if (!meta) return null
+                return (
+                  <TableRow key={threshold.param_type} className={cn("h-[92px]", idx % 2 === 0 ? "bg-white" : "bg-[#fcfcfe]")}>
+                    <TableCell className="px-4">
+                      <div className="flex items-start gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0 mt-[3px]" style={{ backgroundColor: meta.dot }} />
+                        <div className="flex flex-col">
+                          <span className="text-[14px] font-semibold text-[#111827]">{meta.name}</span>
+                          <span className="text-[12px] text-[#9ca3af]">{meta.unit}</span>
+                        </div>
                       </div>
-                    </div>
-                  </TableCell>
-                  {thresholdColumns.map(({ key, type }) => {
-                    const isNA = param.naFields.includes(key)
-                    return (
-                      <TableCell key={key}>
-                        {isNA ? (
-                          <div className="h-[44px] w-[180px] border border-[#d1d5db] rounded-[6px] bg-[#f5f6f7] flex items-center justify-center">
-                            <span className="text-[13px] text-[#9ca3af]">N/A</span>
-                          </div>
-                        ) : (
-                          <div className="h-[44px] w-[180px] border border-[#d1d5db] rounded-[6px] bg-white flex items-center">
-                            <div
-                              className={cn(
-                                "ml-[11px] h-[28px] w-[56px] rounded-[4px] flex items-center justify-center shrink-0",
-                                type === "critical" ? "bg-[#fef2f2]" : "bg-[#fff7ed]"
-                              )}
-                            >
-                              <span
-                                className={cn(
-                                  "text-[13px] font-bold",
-                                  type === "critical" ? "text-[#ef4444]" : "text-[#f97316]"
-                                )}
-                              >
-                                {param.values[key]}
-                              </span>
+                    </TableCell>
+                    {thresholdColumns.map(({ key, type }) => {
+                      const isNA = meta.naFields.includes(key)
+                      const value = threshold[key]
+                      return (
+                        <TableCell key={key}>
+                          {isNA ? (
+                            <div className="h-[44px] w-[180px] border border-[#d1d5db] rounded-[6px] bg-[#f5f6f7] flex items-center justify-center">
+                              <span className="text-[13px] text-[#9ca3af]">N/A</span>
                             </div>
-                            <span className="text-[12px] text-[#9ca3af] ml-[10px]">{param.unit}</span>
-                          </div>
-                        )}
-                      </TableCell>
-                    )
-                  })}
-                </TableRow>
-              ))}
+                          ) : (
+                            <div className="h-[44px] w-[180px] border border-[#d1d5db] rounded-[6px] bg-white flex items-center px-3 gap-2">
+                              <input
+                                type="number"
+                                step="any"
+                                value={value ?? ""}
+                                onChange={(e) => handleChange(threshold.param_type, key, e.target.value)}
+                                className={cn(
+                                  "w-[80px] h-[28px] rounded-[4px] text-center text-[13px] font-bold outline-none",
+                                  type === "critical" ? "bg-[#fef2f2] text-[#ef4444]" : "bg-[#fff7ed] text-[#f97316]"
+                                )}
+                              />
+                              <span className="text-[12px] text-[#9ca3af]">{meta.unit}</span>
+                            </div>
+                          )}
+                        </TableCell>
+                      )
+                    })}
+                  </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
 
           <div className="flex justify-end gap-3 px-6 h-[64px] items-center border-t border-[#e5e7eb]">
-            <Button variant="outline">Cancel</Button>
-            <Button className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white">Save Changes</Button>
+            <Button variant="outline" onClick={fetchData}>Cancel</Button>
+            <Button
+              className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white"
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? "Saving..." : "Save Changes"}
+            </Button>
           </div>
         </CardContent>
       </Card>

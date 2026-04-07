@@ -1,22 +1,20 @@
 "use client"
 
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Bed, Users, DoorOpen, TrendingUp } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { apiGet } from "@/services/api"
 
-export interface StatItem {
-  label: string
-  value: string
-  outerBg: string
-  innerBg: string
-  icon: React.ComponentType<{ className?: string }>
+// ── Types ──────────────────────────────────────────────────────────────────────
+interface WardBedStatus {
+  ward_id: string
+  ward_name: string
+  total_beds: number
+  occupied_beds: number
 }
 
-export interface WardItem {
-  name: string
-  occupied: number
-  total: number
-}
-
+// ── Helpers ────────────────────────────────────────────────────────────────────
 function getOccupancyStyle(rate: number) {
   if (rate >= 90) {
     return { badge: "bg-status-critical-bg text-status-critical", bar: "var(--status-critical)" }
@@ -27,25 +25,60 @@ function getOccupancyStyle(rate: number) {
   return { badge: "bg-status-normal-bg text-status-normal", bar: "var(--status-normal)" }
 }
 
-const stats: StatItem[] = [
-  { label: "Total Beds", value: "120", outerBg: "bg-status-info-bg", innerBg: "bg-status-info", icon: Bed },
-  { label: "Occupied", value: "89", outerBg: "bg-status-critical-bg", innerBg: "bg-status-critical", icon: Users },
-  { label: "Available", value: "31", outerBg: "bg-status-normal-bg", innerBg: "bg-status-normal", icon: DoorOpen },
-  { label: "Occupancy", value: "74%", outerBg: "bg-status-warning-bg", innerBg: "bg-status-warning", icon: TrendingUp },
-]
-
-const wards: WardItem[] = [
-  { name: "Internal Medicine", occupied: 24, total: 32 },
-  { name: "Surgery", occupied: 20, total: 24 },
-  { name: "Pediatrics", occupied: 12, total: 20 },
-  { name: "ICU", occupied: 15, total: 16 },
-  { name: "Emergency", occupied: 8, total: 12 },
-  { name: "Rehabilitation", occupied: 10, total: 16 },
-]
-
+// ── Client Component ───────────────────────────────────────────────────────────
 export function BedStatusClient() {
-  const initialStats = stats
-  const initialWards = wards
+  const [wards, setWards] = useState<WardBedStatus[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const data = await apiGet<WardBedStatus[]>("/proxy/wards/bed-status")
+      setWards(data)
+    } catch (err) {
+      setError("Failed to load bed status")
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  const stats = useMemo(() => {
+    const totalBeds = wards.reduce((sum, w) => sum + w.total_beds, 0)
+    const occupiedBeds = wards.reduce((sum, w) => sum + w.occupied_beds, 0)
+    const availableBeds = totalBeds - occupiedBeds
+    const occupancyPct = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0
+    return [
+      { label: "Total Beds", value: String(totalBeds), outerBg: "bg-status-info-bg", innerBg: "bg-status-info", icon: Bed },
+      { label: "Occupied", value: String(occupiedBeds), outerBg: "bg-status-critical-bg", innerBg: "bg-status-critical", icon: Users },
+      { label: "Available", value: String(availableBeds), outerBg: "bg-status-normal-bg", innerBg: "bg-status-normal", icon: DoorOpen },
+      { label: "Occupancy", value: `${occupancyPct}%`, outerBg: "bg-status-warning-bg", innerBg: "bg-status-warning", icon: TrendingUp },
+    ]
+  }, [wards])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-muted-foreground">Loading bed status...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-2">
+        <p className="text-[#dc2626]">{error}</p>
+        <Button variant="outline" onClick={fetchData}>Retry</Button>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -54,7 +87,7 @@ export function BedStatusClient() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {initialStats.map(({ label, value, outerBg, innerBg, icon: Icon }) => (
+        {stats.map(({ label, value, outerBg, innerBg, icon: Icon }) => (
           <Card key={label} className="shadow-sm">
             <CardContent className="p-4 flex items-center gap-4">
               <div className={`w-11 h-11 rounded-lg flex items-center justify-center flex-shrink-0 ${outerBg}`}>
@@ -72,48 +105,46 @@ export function BedStatusClient() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-        {initialWards.map(({ name, occupied, total }) => {
-          const rate = Math.round((occupied / total) * 100)
-          const style = getOccupancyStyle(rate)
-          return (
-            <Card key={name} className="shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[15px] font-semibold text-foreground">{name}</span>
-                  <span
-                    className={`text-[12px] font-bold px-3 py-0.5 rounded-full w-[56px] text-center ${style.badge}`}
-                    aria-label={`${rate}% ${rate >= 90 ? 'Critical' : rate >= 70 ? 'Warning' : 'Normal'}`}
-                  >
-                    {rate}%
-                  </span>
-                </div>
-                <p className="text-[13px] text-muted-foreground mb-2">{occupied} / {total} beds</p>
-                <div className="w-full h-2.5 rounded-full bg-border mb-3">
-                  <div
-                    className="h-full rounded-full"
-                    style={{ width: `${rate}%`, backgroundColor: style.bar }}
-                  />
-                </div>
-                <div className="flex gap-8 text-[12px] text-muted-foreground">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0" style={{ backgroundColor: style.bar }} />
-                    Occupied: {occupied}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-border inline-block shrink-0" />
-                    Available: {total - occupied}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
+        {wards.length === 0 ? (
+          <p className="text-muted-foreground col-span-full text-center py-8">No wards found.</p>
+        ) : (
+          wards.map(({ ward_id, ward_name, occupied_beds, total_beds }) => {
+            const rate = total_beds > 0 ? Math.round((occupied_beds / total_beds) * 100) : 0
+            const style = getOccupancyStyle(rate)
+            return (
+              <Card key={ward_id} className="shadow-sm">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[15px] font-semibold text-foreground">{ward_name}</span>
+                    <span className={`text-[12px] font-bold px-3 py-0.5 rounded-full w-[56px] text-center ${style.badge}`}>
+                      {rate}%
+                    </span>
+                  </div>
+                  <p className="text-[13px] text-muted-foreground mb-2">{occupied_beds} / {total_beds} beds</p>
+                  <div className="w-full h-2.5 rounded-full bg-border mb-3">
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${rate}%`, backgroundColor: style.bar }}
+                    />
+                  </div>
+                  <div className="flex gap-8 text-[12px] text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0" style={{ backgroundColor: style.bar }} />
+                      Occupied: {occupied_beds}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-border inline-block shrink-0" />
+                      Available: {total_beds - occupied_beds}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })
+        )}
       </div>
 
-      <div
-        className="flex items-center gap-6 flex-wrap text-[12px] text-muted-foreground"
-        aria-label="Occupancy level legend"
-      >
+      <div className="flex items-center gap-6 flex-wrap text-[12px] text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full inline-block bg-status-critical shrink-0" />
           Critical (&ge; 90%)

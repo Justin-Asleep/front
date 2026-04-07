@@ -3,10 +3,13 @@ export type MenuItem = {
   href: string;
 };
 
+import type { UserRole } from "@/types/auth";
+
 export type Tab = {
   id: string;
   label: string;
   href: string;
+  roles?: UserRole[];
 };
 
 export const tabs: Tab[] = [
@@ -14,8 +17,12 @@ export const tabs: Tab[] = [
   { id: "devices", label: "Devices", href: "/devices/tablets" },
   { id: "monitoring", label: "Monitoring", href: "/monitoring/realtime-station" },
   { id: "central-monitor", label: "Central Monitor", href: "/central-monitor/stations" },
-  { id: "admin", label: "Admin Settings", href: "/admin/bed-status" },
+  { id: "admin", label: "Admin Settings", href: "/admin/bed-status", roles: ["SUPER_ADMIN", "ADMIN"] },
 ];
+
+export function getVisibleTabs(role: UserRole | undefined): Tab[] {
+  return tabs.filter((tab) => !tab.roles || (role && tab.roles.includes(role)));
+}
 
 export const sidebarMenus: Record<string, MenuItem[]> = {
   patients: [

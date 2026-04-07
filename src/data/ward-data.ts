@@ -1,5 +1,5 @@
 export type WardStatus = "Active" | "Inactive"
-export type RoomType = "SINGLE" | "QUAD" | "HEX"
+export type RoomType = "SINGLE" | "DOUBLE" | "QUAD" | "HEX"
 
 export type Ward = {
   id: string

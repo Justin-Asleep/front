@@ -19,10 +19,11 @@ import {
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 
-type RoomType = "SINGLE" | "QUAD" | "HEX"
+type RoomType = "SINGLE" | "DOUBLE" | "QUAD" | "HEX"
 
 const ROOM_TYPE_BEDS: Record<RoomType, number> = {
   SINGLE: 1,
+  DOUBLE: 2,
   QUAD: 4,
   HEX: 6,
 }
@@ -119,6 +120,7 @@ export function EditRoomModal({ open, onOpenChange, room, onSave }: EditRoomModa
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="SINGLE">SINGLE (1 bed)</SelectItem>
+                <SelectItem value="DOUBLE">DOUBLE (2 beds)</SelectItem>
                 <SelectItem value="QUAD">QUAD (4 beds)</SelectItem>
                 <SelectItem value="HEX">HEX (6 beds)</SelectItem>
               </SelectContent>

@@ -12,7 +12,7 @@ import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
 import { apiGet, apiPost, apiPatch, apiDelete } from "@/services/api"
 import { toast } from "sonner"
 
-type RoomType = "SINGLE" | "QUAD" | "HEX"
+type RoomType = "SINGLE" | "DOUBLE" | "QUAD" | "HEX"
 
 interface BedDTO {
   id: string
@@ -49,6 +49,7 @@ interface PaginatedData<T> {
 
 const ROOM_TYPE_LABEL: Record<number, string> = {
   1: "SINGLE",
+  2: "DOUBLE",
   4: "QUAD",
   6: "HEX",
 }
@@ -121,7 +122,7 @@ export function WardDetailClient({ wardId }: { wardId: string }) {
 
   async function handleSaveRoom(roomData: { room: string; ward: string; type: RoomType; beds: number; occupied: number; available: number; status: "Active" | "Inactive" }) {
     if (!editRoomTarget) return
-    const ROOM_TYPE_VALUE: Record<RoomType, number> = { SINGLE: 1, QUAD: 4, HEX: 6 }
+    const ROOM_TYPE_VALUE: Record<RoomType, number> = { SINGLE: 1, DOUBLE: 2, QUAD: 4, HEX: 6 }
     const currentType = editRoomTarget.room_type
     const newType = ROOM_TYPE_VALUE[roomData.type]
     try {

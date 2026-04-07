@@ -21,7 +21,7 @@ const EditStationModal = dynamic(
   { ssr: false }
 )
 import { statusBadgeClass } from "@/helpers/status-badge"
-import { apiGet } from "@/services/api"
+import { apiGet, apiPatch } from "@/services/api"
 
 interface StationDTO {
   id: string
@@ -104,16 +104,18 @@ export function StationsClient() {
     setTimeout(() => setCopiedId(null), 2000)
   }
 
-  function handleEdit(data: { name: string; status: StationStatus }) {
+  async function handleEdit(data: { name: string; status: StationStatus }) {
     if (!editTarget) return
-    setStations((prev) =>
-      prev.map((s) =>
-        s.id === editTarget.id
-          ? { ...s, name: data.name, status: data.status }
-          : s
-      )
-    )
-    setEditTarget(null)
+    try {
+      await apiPatch(`/proxy/monitors/stations/${editTarget.id}`, {
+        name: data.name,
+        is_active: data.status === "Active",
+      })
+      setEditTarget(null)
+      await fetchStations()
+    } catch (err) {
+      console.error("Failed to update station:", err)
+    }
   }
 
   if (loading) {

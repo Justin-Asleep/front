@@ -13,7 +13,7 @@ export function proxy(request: NextRequest) {
   }
 
   if (token && isAuthRoute) {
-    return NextResponse.redirect(new URL('/admin/bed-status', request.url))
+    return NextResponse.redirect(new URL('/select', request.url))
   }
 
   return NextResponse.next()
