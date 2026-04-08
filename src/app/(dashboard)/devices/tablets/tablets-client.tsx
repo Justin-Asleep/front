@@ -84,7 +84,7 @@ export function TabletsClient() {
   const fetchBeds = useCallback(async () => {
     try {
       const wardsData = await apiGet<PaginatedData<{ id: string; name: string }>>(
-        "/proxy/wards?page=1&size=100"
+        "/proxy/wards?page=1&size=100&is_active=true"
       )
       const roomsResults = await Promise.all(
         wardsData.items.map((ward) =>
@@ -144,16 +144,16 @@ export function TabletsClient() {
     setCurrentPage(1)
   }
 
-  async function handleRegister(data: { bedId: string }) {
+  async function handleRegister(data: { bedId?: string }) {
     try {
       const result = await apiPost<{ serial_number: string; device_secret: string }>(
-        "/proxy/tablets", { bed_id: data.bedId }
+        "/proxy/tablets", data.bedId ? { bed_id: data.bedId } : {}
       )
+      toast.success("Tablet registered successfully")
       fetchTablets(currentPage)
       return result
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } }
-      toast.error(error.response?.data?.message ?? "Failed to register tablet")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to register tablet")
       return undefined
     }
   }
@@ -167,14 +167,14 @@ export function TabletsClient() {
           reset_secret: data.resetSecret || undefined,
         }
       )
-      toast.success("Tablet updated")
+      toast.success("Tablet updated successfully")
       if (!data.resetSecret) {
+        setEditOpen(false)
         fetchTablets(currentPage)
       }
       return result
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } }
-      toast.error(error.response?.data?.message ?? "Failed to update tablet")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update tablet")
       return undefined
     }
   }
@@ -186,8 +186,8 @@ export function TabletsClient() {
       toast.success("Tablet deactivated")
       setDeleteOpen(false)
       fetchTablets(currentPage)
-    } catch {
-      toast.error("Failed to delete tablet")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete tablet")
     }
   }
 
@@ -303,7 +303,7 @@ export function TabletsClient() {
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-3 text-[#111827] text-[13px]">
-                        {tablet.bed_label ?? "Unassigned"}
+                        {tablet.bed_label ?? "-"}
                       </TableCell>
                       <TableCell className="px-4 py-3 text-[#4b5563] text-[13px]">{wardRoom}</TableCell>
                       <TableCell className="px-4 py-3">

@@ -34,7 +34,7 @@ type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
   beds: BedOption[]
-  onRegister?: (data: { bedId: string }) => Promise<RegisterResult | undefined>
+  onRegister?: (data: { bedId?: string }) => Promise<RegisterResult | undefined>
 }
 
 export function RegisterTabletModal({ open, onOpenChange, beds, onRegister }: Props) {
@@ -43,10 +43,9 @@ export function RegisterTabletModal({ open, onOpenChange, beds, onRegister }: Pr
   const [result, setResult] = useState<RegisterResult | null>(null)
 
   async function handleSubmit() {
-    if (!bedId) return
     setLoading(true)
     try {
-      const res = await onRegister?.({ bedId })
+      const res = await onRegister?.(bedId ? { bedId } : {})
       if (res) setResult(res)
     } finally {
       setLoading(false)
@@ -178,7 +177,7 @@ export function RegisterTabletModal({ open, onOpenChange, beds, onRegister }: Pr
             <div className="px-8 py-5 space-y-5">
               <div className="space-y-1.5">
                 <label className="text-[13px] font-medium text-[#111827]">
-                  Assign to Bed <span className="text-[#dc2626]">*</span>
+                  Assign to Bed
                 </label>
                 <SearchableSelect
                   value={bedId}
@@ -217,7 +216,7 @@ export function RegisterTabletModal({ open, onOpenChange, beds, onRegister }: Pr
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={!bedId || loading}
+                disabled={loading}
                 className="h-10 w-[140px] bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[14px] font-semibold rounded-lg"
               >
                 {loading ? "Registering..." : "Register"}
