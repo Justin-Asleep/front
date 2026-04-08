@@ -65,6 +65,8 @@ export function AddWardModal({ open, onOpenChange, onAdd }: AddWardModalProps) {
           <div className="space-y-1.5">
             <label className="text-[13px] font-medium text-[#111827]">Ward Name *</label>
             <Input
+              name="ward-name"
+              autoComplete="off"
               placeholder="e.g. Internal Medicine"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -75,6 +77,8 @@ export function AddWardModal({ open, onOpenChange, onAdd }: AddWardModalProps) {
           <div className="space-y-1.5">
             <label className="text-[13px] font-medium text-[#111827]">Floor</label>
             <Input
+              name="ward-floor"
+              autoComplete="off"
               placeholder="e.g. 3"
               value={floor}
               onChange={(e) => setFloor(e.target.value)}

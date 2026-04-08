@@ -21,7 +21,7 @@ async function handler(request: NextRequest, { params }: Params) {
   headers.set("Authorization", `Bearer ${token}`);
 
   const init: RequestInit = { method: request.method, headers };
-  if (!["GET", "HEAD"].includes(request.method)) {
+  if (!["GET", "HEAD", "DELETE"].includes(request.method)) {
     init.body = await request.text();
   }
 

@@ -18,30 +18,18 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
-
-type Status = "Active" | "Inactive"
+import { type Member } from "@/app/(dashboard)/admin/members/members-client"
 
 function capitalize(s: string): string {
   return s.charAt(0) + s.slice(1).toLowerCase()
 }
 
-interface MemberData {
-  id: string
-  name: string
-  firstName: string
-  lastName?: string
-  email: string
-  role: string
-  status: Status
-  createdAt: string
-}
-
 interface EditMemberModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  member: MemberData | null
+  member: Member | null
   roles: string[]
-  onSave: (data: MemberData) => void
+  onSave: (data: Member) => void
 }
 
 export function EditMemberModal({ open, onOpenChange, member, roles, onSave }: EditMemberModalProps) {

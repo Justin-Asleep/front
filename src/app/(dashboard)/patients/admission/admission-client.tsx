@@ -120,7 +120,7 @@ export function AdmissionClient() {
   // Load wards on mount, then immediately fetch rooms for the first ward in parallel
   useEffect(() => {
     async function loadWardsAndRooms() {
-      const data = await apiGet<PaginatedData<WardDTO>>("/proxy/wards?page=1&size=100")
+      const data = await apiGet<PaginatedData<WardDTO>>("/proxy/wards?page=1&size=100&is_active=true")
       const sorted = [...data.items].sort((a, b) => (a.floor ?? 0) - (b.floor ?? 0))
       setWards(sorted)
       if (sorted.length === 0) return

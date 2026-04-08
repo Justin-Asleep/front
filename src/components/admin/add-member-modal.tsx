@@ -90,11 +90,13 @@ export function AddMemberModal({ open, onOpenChange, roles, onAdd }: AddMemberMo
         <div className="h-px bg-[#e5e7eb] mx-8 mt-5" />
 
         {/* Form */}
-        <div className="px-8 py-4 space-y-5">
+        <form autoComplete="off" onSubmit={(e) => e.preventDefault()} className="px-8 py-4 space-y-5">
           <div className="flex gap-4">
             <div className="flex-1 space-y-1.5">
               <label className="text-[14px] font-medium text-[#4b5563]">First Name</label>
               <Input
+                name="add-first-name"
+                autoComplete="off"
                 placeholder="Enter first name"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
@@ -104,6 +106,8 @@ export function AddMemberModal({ open, onOpenChange, roles, onAdd }: AddMemberMo
             <div className="flex-1 space-y-1.5">
               <label className="text-[14px] font-medium text-[#4b5563]">Last Name</label>
               <Input
+                name="add-last-name"
+                autoComplete="off"
                 placeholder="Enter last name"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
@@ -115,7 +119,9 @@ export function AddMemberModal({ open, onOpenChange, roles, onAdd }: AddMemberMo
           <div className="space-y-1.5">
             <label className="text-[14px] font-medium text-[#4b5563]">Email</label>
             <Input
+              name="add-email"
               type="email"
+              autoComplete="off"
               placeholder="Enter email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -126,7 +132,9 @@ export function AddMemberModal({ open, onOpenChange, roles, onAdd }: AddMemberMo
           <div className="space-y-1.5">
             <label className="text-[14px] font-medium text-[#4b5563]">Password</label>
             <Input
+              name="add-password"
               type="password"
+              autoComplete="new-password"
               placeholder="Enter password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -150,7 +158,7 @@ export function AddMemberModal({ open, onOpenChange, roles, onAdd }: AddMemberMo
             </Select>
           </div>
 
-        </div>
+        </form>
 
         <div className="h-px bg-[#e5e7eb] mx-8" />
 

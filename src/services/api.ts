@@ -1,4 +1,6 @@
 import axios, { InternalAxiosRequestConfig } from "axios";
+import type { AxiosRequestConfig } from "axios";
+import type { APIResponse } from "@/types/auth";
 
 // same-origin Route Handler proxy — tokens live in httpOnly cookies only
 // browser sends cookies automatically via withCredentials
@@ -9,7 +11,20 @@ const apiClient = axios.create({
   withCredentials: true,
 });
 
-// ── Response interceptor: 401 → refresh → retry ──────────────────────────────
+// ── API Error ────────────────────────────────────────────────────────────────
+
+export class ApiError extends Error {
+  constructor(
+    public errorCode: string,
+    message: string,
+    public statusCode: number,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+// ── Response interceptor: 401 refresh + 에러 변환 ────────────────────────────
 
 let isRefreshing = false;
 const refreshQueue: Array<{
@@ -30,10 +45,12 @@ apiClient.interceptors.response.use(
       originalRequest.url?.includes("/auth/login") ||
       originalRequest.url?.includes("/auth/refresh")
     ) {
-      return Promise.reject(error);
+      return Promise.reject(toApiError(error));
     }
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const status = error.response?.status;
+
+    if (status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           refreshQueue.push({ config: originalRequest, resolve, reject });
@@ -44,9 +61,10 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // cookie 자동 전송 — body 불필요
         await axios.post("/api/auth/refresh", null, { withCredentials: true });
-        refreshQueue.forEach(({ config, resolve }) => resolve(apiClient(config)));
+        refreshQueue.forEach(({ config, resolve, reject }) => {
+          apiClient(config).then(resolve).catch(reject);
+        });
         refreshQueue.length = 0;
         return apiClient(originalRequest);
       } catch (refreshError) {
@@ -61,14 +79,21 @@ apiClient.interceptors.response.use(
       }
     }
 
-    return Promise.reject(error);
+    return Promise.reject(toApiError(error));
   }
 );
 
-// ── Generic wrappers ──────────────────────────────────────────────────────────
+function toApiError(error: unknown): unknown {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data;
+    if (data && data.success === false && data.error_code) {
+      return new ApiError(data.error_code, data.message ?? "Unknown error", error.response!.status);
+    }
+  }
+  return error;
+}
 
-import type { AxiosRequestConfig } from "axios";
-import type { APIResponse } from "@/types/auth";
+// ── Generic wrappers ──────────────────────────────────────────────────────────
 
 export async function apiGet<T>(
   url: string,

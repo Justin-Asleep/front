@@ -72,6 +72,8 @@ export function EditWardModal({ open, onOpenChange, ward, onSave }: EditWardModa
           <div className="space-y-1.5">
             <label className="text-[13px] font-medium text-[#111827]">Ward Name *</label>
             <Input
+              name="edit-ward-name"
+              autoComplete="off"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="h-10 border-[#d1d5db] rounded-lg text-[14px]"
@@ -81,6 +83,8 @@ export function EditWardModal({ open, onOpenChange, ward, onSave }: EditWardModa
           <div className="space-y-1.5">
             <label className="text-[13px] font-medium text-[#111827]">Floor</label>
             <Input
+              name="edit-ward-floor"
+              autoComplete="off"
               value={floor}
               onChange={(e) => setFloor(e.target.value)}
               className="h-10 border-[#d1d5db] rounded-lg text-[14px]"

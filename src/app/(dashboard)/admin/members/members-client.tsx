@@ -23,6 +23,7 @@ import { EditMemberModal } from "@/components/admin/edit-member-modal"
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
 import { statusBadgeClass } from "@/helpers/status-badge"
 import { apiGet, apiPost, apiPatch, apiDelete } from "@/services/api"
+import { toast } from "sonner"
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,13 +36,14 @@ interface MemberResponse {
   last_name: string | null
   role: string
   is_active: boolean
+  is_default: boolean
   created_at: string
   updated_at: string
 }
 
 type Status = "Active" | "Inactive"
 
-export type Account = {
+export type Member = {
   id: string
   name: string
   firstName: string
@@ -49,6 +51,7 @@ export type Account = {
   email: string
   role: string
   status: Status
+  isDefault: boolean
   createdAt: string
 }
 
@@ -58,7 +61,7 @@ function capitalize(s: string): string {
   return s.charAt(0) + s.slice(1).toLowerCase()
 }
 
-function toAccount(m: MemberResponse): Account {
+function toMember(m: MemberResponse): Member {
   return {
     id: m.id,
     name: m.name,
@@ -67,6 +70,7 @@ function toAccount(m: MemberResponse): Account {
     email: m.email,
     role: capitalize(m.role),
     status: m.is_active ? "Active" : "Inactive",
+    isDefault: m.is_default,
     createdAt: m.created_at.slice(0, 10),
   }
 }
@@ -90,8 +94,8 @@ function getInitials(name: string) {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function AccountsClient() {
-  const [accounts, setAccounts] = useState<Account[]>([])
+export function MembersClient() {
+  const [members, setMembers] = useState<Member[]>([])
   const [roles, setRoles] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -101,8 +105,8 @@ export function AccountsClient() {
   const [currentPage, setCurrentPage] = useState(1)
 
   const [addOpen, setAddOpen] = useState(false)
-  const [editTarget, setEditTarget] = useState<Account | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<Account | null>(null)
+  const [editTarget, setEditTarget] = useState<Member | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Member | null>(null)
 
   const fetchMembers = useCallback(async () => {
     try {
@@ -112,7 +116,7 @@ export function AccountsClient() {
         ),
         apiGet<string[]>("/proxy/members/roles"),
       ])
-      setAccounts(membersRes.items.map(toAccount))
+      setMembers(membersRes.items.map(toMember))
       setRoles(rolesRes)
       setError(null)
     } catch (err) {
@@ -134,7 +138,7 @@ export function AccountsClient() {
   )
 
   const filtered = useMemo(() => {
-    return accounts.filter((a) => {
+    return members.filter((a) => {
       const matchesSearch =
         search === "" ||
         a.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -142,7 +146,7 @@ export function AccountsClient() {
       const matchesRole = selectedRole === "All" || a.role === selectedRole
       return matchesSearch && matchesRole
     })
-  }, [accounts, search, selectedRole])
+  }, [members, search, selectedRole])
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
   const start = (currentPage - 1) * PAGE_SIZE
@@ -170,12 +174,14 @@ export function AccountsClient() {
         password: data.password,
       })
       await fetchMembers()
+      toast.success("Member added successfully")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to add member")
+      toast.error(err instanceof Error ? err.message : "Failed to add member")
+      throw err
     }
   }
 
-  async function handleSave(data: Account) {
+  async function handleSave(data: Member) {
     try {
       await apiPatch(`/proxy/members/${data.id}`, {
         first_name: data.firstName,
@@ -195,8 +201,9 @@ export function AccountsClient() {
       await apiDelete(`/proxy/members/${deleteTarget.id}`)
       setDeleteTarget(null)
       await fetchMembers()
+      toast.success("Member deleted successfully")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete member")
+      toast.error(err instanceof Error ? err.message : "Failed to delete member")
     }
   }
 
@@ -224,8 +231,8 @@ export function AccountsClient() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[#111827]">Account Management</h1>
-          <p className="text-sm text-[#4b5563]">Manage hospital staff accounts and permissions</p>
+          <h1 className="text-2xl font-bold tracking-tight text-[#111827]">Member Management</h1>
+          <p className="text-sm text-[#4b5563]">Manage hospital staff members and permissions</p>
         </div>
         <Button
           className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white"
@@ -240,8 +247,10 @@ export function AccountsClient() {
         <div className="relative">
           <Search className="absolute left-2.5 top-2 size-4 text-[#9ca3af] pointer-events-none" />
           <Input
+            name="member-search"
             placeholder="Search by name or email..."
             className="pl-8 w-[300px] h-9 border-[#d1d5db]"
+            autoComplete="off"
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
           />
@@ -282,13 +291,13 @@ export function AccountsClient() {
               {paginated.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="px-4 py-12 text-center text-[#9ca3af]">
-                    No accounts found
+                    No members found
                   </TableCell>
                 </TableRow>
               ) : (
-                paginated.map((account, idx) => (
+                paginated.map((member, idx) => (
                   <TableRow
-                    key={account.id}
+                    key={member.id}
                     className={cn(
                       "border-b border-[#e5e7eb]",
                       idx % 2 === 1 ? "bg-[#f9fafb]" : "bg-white"
@@ -298,39 +307,46 @@ export function AccountsClient() {
                       <div className="flex items-center gap-3">
                         <Avatar className="size-7">
                           <AvatarFallback className="text-xs bg-[#eff6ff] text-[#2563eb]">
-                            {getInitials(account.name)}
+                            {getInitials(member.name)}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="font-medium text-[#111827]">{account.name}</span>
+                        <span className="font-medium text-[#111827]">{member.name}</span>
+                        {member.isDefault && (
+                          <Badge className="bg-[#fef3c7] text-[#d97706] border-0 text-[10px]">Default</Badge>
+                        )}
                       </div>
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-[13px] text-[#4b5563]">{account.email}</TableCell>
+                    <TableCell className="px-4 py-3 text-[13px] text-[#4b5563]">{member.email}</TableCell>
                     <TableCell className="px-4 py-3">
-                      <Badge className={roleBadgeClass[account.role] ?? ""}>{account.role}</Badge>
+                      <Badge className={roleBadgeClass[member.role] ?? ""}>{member.role}</Badge>
                     </TableCell>
                     <TableCell className="px-4 py-3">
-                      <Badge className={statusBadgeClass[account.status]}>{account.status}</Badge>
+                      <Badge className={statusBadgeClass[member.status]}>{member.status}</Badge>
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-[13px] text-[#4b5563]">{account.createdAt}</TableCell>
+                    <TableCell className="px-4 py-3 text-[13px] text-[#4b5563]">{member.createdAt}</TableCell>
                     <TableCell className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-8 text-[#2563eb] hover:text-[#1d4ed8]"
-                          onClick={() => setEditTarget(account)}
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-8 text-[#dc2626] hover:text-[#b91c1c]"
-                          onClick={() => setDeleteTarget(account)}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </div>
+                      {member.isDefault ? (
+                        <span className="text-[12px] text-[#9ca3af]">Protected</span>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 text-[#2563eb] hover:text-[#1d4ed8]"
+                            onClick={() => setEditTarget(member)}
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 text-[#dc2626] hover:text-[#b91c1c]"
+                            onClick={() => setDeleteTarget(member)}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
