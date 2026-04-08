@@ -12,7 +12,8 @@ interface ConfirmDeleteDialogProps {
   onOpenChange: (open: boolean) => void
   title: string
   targetName: string
-  onConfirm: () => void
+  description?: string
+  onConfirm: () => void | Promise<void>
 }
 
 export function ConfirmDeleteDialog({
@@ -20,6 +21,7 @@ export function ConfirmDeleteDialog({
   onOpenChange,
   title,
   targetName,
+  description,
   onConfirm,
 }: ConfirmDeleteDialogProps) {
   return (
@@ -41,6 +43,7 @@ export function ConfirmDeleteDialog({
               <span className="font-bold text-[#111827]">{targetName}</span>?
             </p>
             <p>This action cannot be undone.</p>
+            {description && <p className="mt-1 text-[#dc2626]">{description}</p>}
           </div>
         </div>
 
@@ -58,8 +61,8 @@ export function ConfirmDeleteDialog({
           </DialogPrimitive.Close>
           <Button
             className="h-11 w-[120px] bg-[#dc2626] hover:bg-[#b91c1c] text-white font-semibold text-sm rounded-lg"
-            onClick={() => {
-              onConfirm()
+            onClick={async () => {
+              await onConfirm()
               onOpenChange(false)
             }}
           >

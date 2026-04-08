@@ -9,7 +9,7 @@ import { AddRoomModal } from "@/components/admin/add-room-modal"
 import { EditRoomModal } from "@/components/admin/edit-room-modal"
 import { EditWardModal } from "@/components/admin/edit-ward-modal"
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
-import { apiGet, apiPost, apiPatch, apiDelete } from "@/services/api"
+import { apiGet, apiPost, apiPatch, apiDelete, ApiError } from "@/services/api"
 import { toast } from "sonner"
 
 type RoomType = "SINGLE" | "DOUBLE" | "QUAD" | "HEX"
@@ -102,8 +102,13 @@ export function WardDetailClient({ wardId }: { wardId: string }) {
         room_type: data.beds,
       })
       await fetchData()
+      toast.success("Room added successfully")
     } catch (err) {
-      console.error("Failed to create room:", err)
+      if (err instanceof ApiError && err.errorCode === "DUPLICATE") {
+        toast.error("A room with this name already exists")
+      } else {
+        toast.error(err instanceof Error ? err.message : "Failed to create room")
+      }
     }
   }
 
@@ -114,9 +119,16 @@ export function WardDetailClient({ wardId }: { wardId: string }) {
         floor: data.floor ? Number(data.floor) : null,
         is_active: data.status === "Active",
       })
-      await fetchWardFromList()
+      await Promise.all([fetchWardFromList(), fetchData()])
+      toast.success("Ward updated successfully")
     } catch (err) {
-      console.error("Failed to update ward:", err)
+      if (err instanceof ApiError && err.errorCode === "ACTIVE_ENCOUNTER_EXISTS") {
+        toast.error("Cannot deactivate: beds have active patients admitted")
+      } else if (err instanceof ApiError && err.errorCode === "DUPLICATE") {
+        toast.error("A ward with this name already exists")
+      } else {
+        toast.error(err instanceof Error ? err.message : "Failed to update ward")
+      }
     }
   }
 
@@ -133,12 +145,14 @@ export function WardDetailClient({ wardId }: { wardId: string }) {
       })
       setEditRoomTarget(null)
       await fetchData()
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { error_code?: string; message?: string } } }
-      if (error.response?.data?.error_code === "ACTIVE_ENCOUNTER_EXISTS") {
-        toast.error(error.response.data.message ?? "Cannot change room type: beds have active encounters")
+      toast.success("Room updated successfully")
+    } catch (err) {
+      if (err instanceof ApiError && err.errorCode === "ACTIVE_ENCOUNTER_EXISTS") {
+        toast.error("Cannot change room type: beds have active patients admitted")
+      } else if (err instanceof ApiError && err.errorCode === "DUPLICATE") {
+        toast.error("A room with this name already exists")
       } else {
-        toast.error("Failed to update room")
+        toast.error(err instanceof Error ? err.message : "Failed to update room")
       }
     }
   }
@@ -149,12 +163,12 @@ export function WardDetailClient({ wardId }: { wardId: string }) {
       await apiDelete(`/proxy/wards/rooms/${deleteTarget.id}`)
       setDeleteTarget(null)
       await fetchData()
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { error_code?: string; message?: string } } }
-      if (error.response?.data?.error_code === "ACTIVE_ENCOUNTER_EXISTS") {
-        toast.error(error.response.data.message ?? "Cannot delete room: beds have active encounters")
+      toast.success("Room deleted successfully")
+    } catch (err) {
+      if (err instanceof ApiError && err.errorCode === "ACTIVE_ENCOUNTER_EXISTS") {
+        toast.error("Cannot delete: beds have active patients admitted")
       } else {
-        toast.error("Failed to delete room")
+        toast.error(err instanceof Error ? err.message : "Failed to delete room")
       }
       setDeleteTarget(null)
     }
@@ -342,6 +356,7 @@ export function WardDetailClient({ wardId }: { wardId: string }) {
         onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
         title="Delete Room"
         targetName={deleteTarget?.name ?? ""}
+        description="All beds and tablet mappings in this room will also be deleted."
         onConfirm={handleDeleteRoom}
       />
 

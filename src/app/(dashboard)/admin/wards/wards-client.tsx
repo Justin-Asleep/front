@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -17,7 +18,7 @@ import { Pencil, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AddWardModal } from "@/components/admin/add-ward-modal"
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
-import { apiGet, apiPost, apiDelete } from "@/services/api"
+import { apiGet, apiPost, apiDelete, ApiError } from "@/services/api"
 
 interface WardDTO {
   id: string
@@ -70,8 +71,13 @@ export function WardsClient() {
         floor: data.floor ? Number(data.floor) : null,
       })
       await fetchWards()
+      toast.success("Ward added successfully")
     } catch (err) {
-      console.error("Failed to create ward:", err)
+      if (err instanceof ApiError && err.errorCode === "DUPLICATE") {
+        toast.error("A ward with this name already exists")
+      } else {
+        toast.error(err instanceof Error ? err.message : "Failed to create ward")
+      }
     }
   }
 
@@ -81,8 +87,13 @@ export function WardsClient() {
       await apiDelete(`/proxy/wards/${deleteTarget.id}`)
       setDeleteTarget(null)
       await fetchWards()
+      toast.success("Ward deleted successfully")
     } catch (err) {
-      console.error("Failed to delete ward:", err)
+      if (err instanceof ApiError && err.errorCode === "ACTIVE_ENCOUNTER_EXISTS") {
+        toast.error("Cannot delete: beds have active patients admitted")
+      } else {
+        toast.error(err instanceof Error ? err.message : "Failed to delete ward")
+      }
     }
   }
 
@@ -196,6 +207,7 @@ export function WardsClient() {
         onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
         title="Delete Ward"
         targetName={deleteTarget?.name ?? ""}
+        description="All rooms, beds, and tablet mappings in this ward will also be deleted."
         onConfirm={handleDelete}
       />
     </div>
