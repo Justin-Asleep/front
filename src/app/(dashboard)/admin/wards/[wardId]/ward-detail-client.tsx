@@ -87,6 +87,22 @@ export function WardDetailClient({ wardId }: { wardId: string }) {
     fetchAll()
   }, [fetchAll])
 
+  const editWardForModal = useMemo(() => ward
+    ? { id: ward.id, name: ward.name, floor: ward.floor?.toString() ?? "", status: (ward.is_active ? "Active" : "Inactive") as "Active" | "Inactive" }
+    : null, [ward])
+
+  const editRoomForModal = useMemo(() => editRoomTarget
+    ? {
+        room: editRoomTarget.name,
+        ward: ward?.name ?? "Ward",
+        type: (ROOM_TYPE_LABEL[editRoomTarget.room_type] ?? "QUAD") as RoomType,
+        beds: editRoomTarget.beds.length,
+        occupied: 0,
+        available: editRoomTarget.beds.length,
+        status: (editRoomTarget.is_active ? "Active" : "Inactive") as "Active" | "Inactive",
+      }
+    : null, [editRoomTarget, ward])
+
   async function handleAddRoom(data: { ward: string; name: string; type: RoomType; beds: number }) {
     try {
       await apiPost(`/proxy/wards/${wardId}/rooms`, {
@@ -187,22 +203,6 @@ export function WardDetailClient({ wardId }: { wardId: string }) {
   const wardName = ward?.name ?? "Ward"
   const wardFloor = ward?.floor ? `${ward.floor}F` : "—"
   const wardIsActive = ward?.is_active ?? true
-
-  const editWardForModal = useMemo(() => ward
-    ? { id: ward.id, name: ward.name, floor: ward.floor?.toString() ?? "", status: (ward.is_active ? "Active" : "Inactive") as "Active" | "Inactive" }
-    : null, [ward])
-
-  const editRoomForModal = useMemo(() => editRoomTarget
-    ? {
-        room: editRoomTarget.name,
-        ward: wardName,
-        type: (ROOM_TYPE_LABEL[editRoomTarget.room_type] ?? "QUAD") as RoomType,
-        beds: editRoomTarget.beds.length,
-        occupied: 0,
-        available: editRoomTarget.beds.length,
-        status: (editRoomTarget.is_active ? "Active" : "Inactive") as "Active" | "Inactive",
-      }
-    : null, [editRoomTarget, wardName])
 
   return (
     <div className="space-y-6">
