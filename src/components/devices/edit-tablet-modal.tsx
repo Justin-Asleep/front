@@ -13,7 +13,12 @@ import { cn } from "@/lib/utils"
 import { Switch } from "@/components/ui/switch"
 import { Copy, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
-import { QRCodeSVG } from "qrcode.react"
+import dynamic from "next/dynamic"
+
+const QRCodeSVG = dynamic(
+  () => import("qrcode.react").then((m) => ({ default: m.QRCodeSVG })),
+  { ssr: false }
+)
 
 interface BedOption {
   id: string

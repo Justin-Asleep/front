@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -39,14 +39,7 @@ export function EditMemberModal({ open, onOpenChange, member, roles, onSave }: E
   const [role, setRole] = useState(member?.role ?? "")
   const [active, setActive] = useState(member?.status !== "Inactive")
 
-  useEffect(() => {
-    if (member) {
-      setFirstName(member.firstName)
-      setLastName(member.lastName ?? "")
-      setRole(member.role)
-      setActive(member.status !== "Inactive")
-    }
-  }, [member])
+
 
   function handleSubmit() {
     if (!member || !firstName) return

@@ -6,13 +6,7 @@ import { Maximize, Minimize } from "lucide-react"
 import { apiGet } from "@/services/api"
 import { SearchableSelect } from "@/components/ui/searchable-select"
 import { BedMonitorCard } from "@/components/monitoring/bed-monitor-card"
-import type { MonitorListItem, MonitorRealtime, PaginatedData, RealtimeBed } from "@/types/monitor"
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
-function getGridCols(layout: string): number {
-  const cols = parseInt(layout.split("x")[0], 10)
-  return cols || 2
-}
+import type { MonitorListItem, MonitorRealtime, PaginatedData } from "@/types/monitor"
 
 // ── Client Component ───────────────────────────────────────────────────────────
 export function RealtimeMonitorClient() {
@@ -71,7 +65,7 @@ export function RealtimeMonitorClient() {
 
   const monitorOptions = useMemo(() => monitors.map((m) => ({ value: m.id, label: m.name })), [monitors])
   const connectedBeds = realtimeData?.beds.filter((b) => b.encounter_id).length ?? 0
-  const gridCols = realtimeData ? getGridCols(realtimeData.layout) : 2
+
 
   // ── Drag-to-scroll ──
   const scrollRef = useRef<HTMLDivElement>(null)

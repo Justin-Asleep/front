@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -145,7 +145,7 @@ export function DeviceLogClient() {
   }
 
   // Device select options: serial (bed_label)
-  const deviceOptions = [
+  const deviceOptions = useMemo(() => [
     { value: "", label: "All Devices" },
     ...tablets.map((t) => ({
       value: t.id,
@@ -153,7 +153,7 @@ export function DeviceLogClient() {
         ? `${t.serial_number} (${t.bed_label})`
         : `${t.serial_number} (Unassigned)`,
     })),
-  ]
+  ], [tablets])
 
   return (
     <div className="space-y-6">

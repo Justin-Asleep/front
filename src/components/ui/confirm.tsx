@@ -50,11 +50,11 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     })
   }, [])
 
-  function handleResult(value: boolean) {
+  const handleResult = useCallback((value: boolean) => {
     setOpen(false)
     resolveRef.current?.(value)
     resolveRef.current = null
-  }
+  }, [])
 
   const variant = options?.variant ?? "default"
   const styles = VARIANT_STYLES[variant]

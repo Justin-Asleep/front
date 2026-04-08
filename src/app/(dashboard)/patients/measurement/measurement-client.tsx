@@ -146,7 +146,7 @@ export function MeasurementClient() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeRange, setActiveRange] = useState<TimeRange>("1H")
-  const [isPending, startTransition] = useTransition()
+  const [, startTransition] = useTransition()
 
   const fetchData = useCallback(async (range: TimeRange) => {
     if (!mrn) return

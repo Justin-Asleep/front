@@ -87,13 +87,15 @@ export function EditMonitorModal({ open, onOpenChange, monitor, onSubmit }: Prop
   const [bedsLoading, setBedsLoading] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  interface CursorData<T> { items: T[]; next_cursor: string | null; has_more: boolean }
-  interface AvailableBedDTO { id: string; label: string; patient_name: string | null }
+  const slotsRef = useRef(slots)
+  slotsRef.current = slots
 
   const searchBeds = useCallback(async (query: string) => {
     setBedsLoading(true)
     try {
-      const assignedIds = new Set(slots.filter((s) => s.bedId).map((s) => s.bedId))
+      const assignedIds = new Set(slotsRef.current.filter((s) => s.bedId).map((s) => s.bedId))
+      interface CursorData<T> { items: T[]; next_cursor: string | null; has_more: boolean }
+      interface AvailableBedDTO { id: string; label: string; patient_name: string | null }
       const all: BedItem[] = []
       let cursor: string | null = null
       do {
@@ -114,7 +116,7 @@ export function EditMonitorModal({ open, onOpenChange, monitor, onSubmit }: Prop
     } finally {
       setBedsLoading(false)
     }
-  }, [slots])
+  }, [])
 
   function handleBedSearch(value: string) {
     setBedSearch(value)
@@ -154,13 +156,13 @@ export function EditMonitorModal({ open, onOpenChange, monitor, onSubmit }: Prop
   }
 
   function handleRemoveBed(position: number) {
-    setSlots((prev) => {
-      const removed = prev.find((s) => s.position === position)
-      if (removed?.bedId) {
-        setAvailableBeds((beds) => [...beds, { id: removed.bedId!, label: removed.bedLabel!, patient: removed.patient }])
-      }
-      return prev.map((s) => (s.position === position ? { ...s, bedId: null, bedLabel: null, patient: null } : s))
-    })
+    const removed = slots.find((s) => s.position === position)
+    if (removed?.bedId) {
+      setAvailableBeds((prev) => [...prev, { id: removed.bedId!, label: removed.bedLabel!, patient: removed.patient }])
+    }
+    setSlots((prev) =>
+      prev.map((s) => (s.position === position ? { ...s, bedId: null, bedLabel: null, patient: null } : s))
+    )
   }
 
   function handleAssignBed(bed: BedItem, position: number) {

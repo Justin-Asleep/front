@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import {
   Dialog,
   DialogContent,
@@ -148,8 +148,10 @@ export function AlarmHistoryModal({
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const { label: dateRangeLabel } = getTimeRange(timeFilter)
 
-  const criticalCount = alarms.filter((a) => a.severity === "CRITICAL").length
-  const warningCount = alarms.filter((a) => a.severity === "HIGH").length
+  const { criticalCount, warningCount } = useMemo(() => ({
+    criticalCount: alarms.filter((a) => a.severity === "CRITICAL").length,
+    warningCount: alarms.filter((a) => a.severity === "HIGH").length,
+  }), [alarms])
 
   function handleTimeFilter(f: TimeFilter) {
     setTimeFilter(f)

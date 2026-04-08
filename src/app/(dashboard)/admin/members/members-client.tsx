@@ -149,8 +149,10 @@ export function MembersClient() {
   }, [members, search, selectedRole])
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
-  const start = (currentPage - 1) * PAGE_SIZE
-  const paginated = filtered.slice(start, start + PAGE_SIZE)
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE
+    return filtered.slice(start, start + PAGE_SIZE)
+  }, [filtered, currentPage])
 
   function handleRoleChange(role: string) {
     setSelectedRole(role)
@@ -373,6 +375,7 @@ export function MembersClient() {
       />
 
       <EditMemberModal
+        key={editTarget?.id}
         open={editTarget !== null}
         onOpenChange={(open) => { if (!open) setEditTarget(null) }}
         member={editTarget}

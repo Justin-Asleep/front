@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { apiGet } from "@/services/api"
@@ -137,7 +137,7 @@ function SensorBattery({ label, pct, connected }: { label: string; pct: number |
     <div className="flex items-center gap-0.5">
       <span className={cn("text-[11px] font-medium", isOff ? "text-muted-foreground" : "text-foreground")}>{label}</span>
       <BatteryMedium className="size-[10px] text-muted-foreground" style={{ color: isOff ? undefined : fillColor }} />
-      <span className={cn("text-[11px]", isOff ? "text-muted-foreground" : "text-muted-foreground")}>
+      <span className="text-[11px] text-muted-foreground">
         {isOff ? "--" : `${pct}%`}
       </span>
     </div>
@@ -156,7 +156,7 @@ function VitalCell({ label, value, color }: { label: string; value: string | num
   )
 }
 
-function EmptyBedCard({ bed }: { bed: RealtimeBed }) {
+const EmptyBedCard = React.memo(function EmptyBedCard({ bed }: { bed: RealtimeBed }) {
   return (
     <div className={cn("rounded-[8px] min-h-[168px] overflow-hidden relative flex cursor-default", cardBorder.empty, cardBg.empty)}>
       <div className={cn("w-1 flex-shrink-0", leftBarBg.empty)} />
@@ -166,9 +166,9 @@ function EmptyBedCard({ bed }: { bed: RealtimeBed }) {
       </div>
     </div>
   )
-}
+})
 
-function OccupiedBedCard({ bed, onClick }: { bed: RealtimeBed; status: BedStatus; onClick: () => void }) {
+const OccupiedBedCard = React.memo(function OccupiedBedCard({ bed, onClick }: { bed: RealtimeBed; onClick: () => void }) {
   const status = deriveBedStatus(bed)
   const hasBanner = status === "warning" || status === "critical"
   const v = bed.vitals
@@ -255,7 +255,7 @@ function OccupiedBedCard({ bed, onClick }: { bed: RealtimeBed; status: BedStatus
       </div>
     </div>
   )
-}
+})
 
 // ── Client Component ───────────────────────────────────────────────────────
 
@@ -296,16 +296,19 @@ export function RealtimeStationClient() {
     if (selectedId) fetchRealtime(selectedId)
   }, [selectedId, fetchRealtime])
 
-  const beds = realtimeData?.beds ?? []
-  const occupiedCount = beds.filter((b) => b.encounter_id).length
-  const occupancyPct = beds.length > 0 ? Math.round((occupiedCount / beds.length) * 100) : 0
-  const alarmCount = beds.filter((b) => b.alarm_message).length
+  const { beds, occupiedCount, occupancyPct, alarmCount } = useMemo(() => {
+    const b = realtimeData?.beds ?? []
+    const occupied = b.filter((bed) => bed.encounter_id).length
+    const pct = b.length > 0 ? Math.round((occupied / b.length) * 100) : 0
+    const alarms = b.filter((bed) => bed.alarm_message).length
+    return { beds: b, occupiedCount: occupied, occupancyPct: pct, alarmCount: alarms }
+  }, [realtimeData])
   const stationOptions = useMemo(() => stations.map((s) => ({ value: s.id, label: s.name })), [stations])
 
-  function handleCardClick(bed: RealtimeBed) {
+  const handleCardClick = useCallback((bed: RealtimeBed) => {
     if (!bed.encounter_id) return
     router.push(`/monitoring/patient-monitor?bed=${bed.bed_id}`)
-  }
+  }, [router])
 
   if (loading) {
     return (
@@ -359,14 +362,12 @@ export function RealtimeStationClient() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {beds.map((bed) => {
-          const status = deriveBedStatus(bed)
-          return status === "empty" ? (
+          return !bed.encounter_id ? (
             <EmptyBedCard key={bed.position} bed={bed} />
           ) : (
             <OccupiedBedCard
               key={bed.position}
               bed={bed}
-              status={status}
               onClick={() => handleCardClick(bed)}
             />
           )

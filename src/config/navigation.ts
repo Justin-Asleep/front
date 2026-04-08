@@ -1,9 +1,9 @@
+import type { UserRole } from "@/types/auth";
+
 export type MenuItem = {
   label: string;
   href: string;
 };
-
-import type { UserRole } from "@/types/auth";
 
 export type Tab = {
   id: string;

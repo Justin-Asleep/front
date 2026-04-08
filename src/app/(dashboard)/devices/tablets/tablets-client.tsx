@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,8 +16,16 @@ import {
 import { Search, Pencil, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { PaginationBar } from "@/components/ui/pagination-bar"
-import { RegisterTabletModal } from "@/components/devices/register-tablet-modal"
-import { EditTabletModal } from "@/components/devices/edit-tablet-modal"
+import dynamic from "next/dynamic"
+
+const RegisterTabletModal = dynamic(
+  () => import("@/components/devices/register-tablet-modal").then((m) => ({ default: m.RegisterTabletModal })),
+  { ssr: false }
+)
+const EditTabletModal = dynamic(
+  () => import("@/components/devices/edit-tablet-modal").then((m) => ({ default: m.EditTabletModal })),
+  { ssr: false }
+)
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
 import { statusBadgeClass } from "@/helpers/status-badge"
 import { apiGet, apiPost, apiPatch, apiDelete } from "@/services/api"
@@ -120,7 +128,7 @@ export function TabletsClient() {
   }, [currentPage, fetchTablets])
 
   // Client-side filter (search + status)
-  const filtered = tablets.filter((t) => {
+  const filtered = useMemo(() => tablets.filter((t) => {
     const matchesSearch =
       search === "" ||
       t.serial_number.toLowerCase().includes(search.toLowerCase()) ||
@@ -130,7 +138,7 @@ export function TabletsClient() {
       (selectedStatus === "Active" && t.is_active) ||
       (selectedStatus === "Inactive" && !t.is_active)
     return matchesSearch && matchesStatus
-  })
+  }), [tablets, search, selectedStatus])
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
 

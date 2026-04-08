@@ -32,9 +32,11 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <AuthProvider>
-          <ConfirmProvider>{children}</ConfirmProvider>
+          <ConfirmProvider>
+            {children}
+            <Toaster />
+          </ConfirmProvider>
         </AuthProvider>
-        <Toaster />
       </body>
     </html>
   );

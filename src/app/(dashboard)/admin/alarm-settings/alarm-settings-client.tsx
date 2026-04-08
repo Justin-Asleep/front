@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -77,6 +77,8 @@ export function AlarmSettingsClient() {
     )
   }
 
+  const ordered = useMemo(() => PARAM_ORDER.map((pt) => thresholds.find((t) => t.param_type === pt)).filter(Boolean) as AlarmThreshold[], [thresholds])
+
   async function handleSave() {
     try {
       setSaving(true)
@@ -105,8 +107,6 @@ export function AlarmSettingsClient() {
       </div>
     )
   }
-
-  const ordered = PARAM_ORDER.map((pt) => thresholds.find((t) => t.param_type === pt)).filter(Boolean) as AlarmThreshold[]
 
   return (
     <div className="space-y-6">

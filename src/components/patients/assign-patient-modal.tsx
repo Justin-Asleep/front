@@ -53,6 +53,9 @@ export function AssignPatientModal({
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(false)
   const observerRef = useRef<HTMLDivElement | null>(null)
+  const loadingMoreRef = useRef(false)
+  const nextCursorRef = useRef<string | null>(null)
+  const debouncedSearchRef = useRef("")
 
   // Debounce search input
   useEffect(() => {
@@ -80,13 +83,18 @@ export function AssignPatientModal({
     }
   }, [])
 
+  // Keep refs in sync
+  nextCursorRef.current = nextCursor
+  debouncedSearchRef.current = debouncedSearch
+
   // Fetch more patients (infinite scroll)
   const fetchMore = useCallback(async () => {
-    if (!nextCursor || loadingMore) return
+    if (!nextCursorRef.current || loadingMoreRef.current) return
+    loadingMoreRef.current = true
     setLoadingMore(true)
     try {
-      const params = new URLSearchParams({ limit: "20", cursor: nextCursor })
-      if (debouncedSearch) params.set("search", debouncedSearch)
+      const params = new URLSearchParams({ limit: "20", cursor: nextCursorRef.current })
+      if (debouncedSearchRef.current) params.set("search", debouncedSearchRef.current)
       const data = await apiGet<CursorPage>(`/proxy/patients/available?${params}`)
       setPatients((prev) => [
         ...prev,
@@ -100,9 +108,10 @@ export function AssignPatientModal({
       setNextCursor(data.next_cursor)
       setHasMore(data.has_more)
     } finally {
+      loadingMoreRef.current = false
       setLoadingMore(false)
     }
-  }, [nextCursor, loadingMore, debouncedSearch])
+  }, [])
 
   // Load on open & search change
   useEffect(() => {

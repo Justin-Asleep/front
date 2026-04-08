@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -64,36 +64,28 @@ export function WardDetailClient({ wardId }: { wardId: string }) {
   const [editRoomTarget, setEditRoomTarget] = useState<RoomWithBedsDTO | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<RoomWithBedsDTO | null>(null)
 
-  const fetchData = useCallback(async () => {
+  const fetchAll = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
-      const data = await apiGet<PaginatedData<RoomWithBedsDTO>>(
-        `/proxy/wards/${wardId}/rooms?page=1&size=100`
-      )
-      setRooms(data.items)
+      const [roomsData, wardsData] = await Promise.all([
+        apiGet<PaginatedData<RoomWithBedsDTO>>(`/proxy/wards/${wardId}/rooms?page=1&size=100`),
+        apiGet<PaginatedData<WardDTO>>(`/proxy/wards?page=1&size=100`),
+      ])
+      setRooms(roomsData.items)
+      const found = wardsData.items.find((w) => w.id === wardId)
+      if (found) setWard(found)
     } catch (err) {
-      setError("Failed to load rooms")
+      setError("Failed to load ward details")
       console.error(err)
     } finally {
       setLoading(false)
     }
   }, [wardId])
 
-  const fetchWardFromList = useCallback(async () => {
-    try {
-      const data = await apiGet<PaginatedData<WardDTO>>(`/proxy/wards?page=1&size=100`)
-      const found = data.items.find((w) => w.id === wardId)
-      if (found) setWard(found)
-    } catch (err) {
-      console.error("Failed to load ward info:", err)
-    }
-  }, [wardId])
-
   useEffect(() => {
-    fetchData()
-    fetchWardFromList()
-  }, [fetchData, fetchWardFromList])
+    fetchAll()
+  }, [fetchAll])
 
   async function handleAddRoom(data: { ward: string; name: string; type: RoomType; beds: number }) {
     try {
@@ -101,7 +93,7 @@ export function WardDetailClient({ wardId }: { wardId: string }) {
         name: data.name,
         room_type: data.beds,
       })
-      await fetchData()
+      await fetchAll()
       toast.success("Room added successfully")
     } catch (err) {
       if (err instanceof ApiError && err.errorCode === "DUPLICATE") {
@@ -119,7 +111,7 @@ export function WardDetailClient({ wardId }: { wardId: string }) {
         floor: data.floor ? Number(data.floor) : null,
         is_active: data.status === "Active",
       })
-      await Promise.all([fetchWardFromList(), fetchData()])
+      await fetchAll()
       toast.success("Ward updated successfully")
     } catch (err) {
       if (err instanceof ApiError && err.errorCode === "ACTIVE_ENCOUNTER_EXISTS") {
@@ -144,7 +136,7 @@ export function WardDetailClient({ wardId }: { wardId: string }) {
         ...(newType !== currentType ? { room_type: newType } : {}),
       })
       setEditRoomTarget(null)
-      await fetchData()
+      await fetchAll()
       toast.success("Room updated successfully")
     } catch (err) {
       if (err instanceof ApiError && err.errorCode === "ACTIVE_ENCOUNTER_EXISTS") {
@@ -162,7 +154,7 @@ export function WardDetailClient({ wardId }: { wardId: string }) {
     try {
       await apiDelete(`/proxy/wards/rooms/${deleteTarget.id}`)
       setDeleteTarget(null)
-      await fetchData()
+      await fetchAll()
       toast.success("Room deleted successfully")
     } catch (err) {
       if (err instanceof ApiError && err.errorCode === "ACTIVE_ENCOUNTER_EXISTS") {
@@ -186,7 +178,7 @@ export function WardDetailClient({ wardId }: { wardId: string }) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-2">
         <p className="text-[#dc2626]">{error}</p>
-        <Button variant="outline" onClick={fetchData}>Retry</Button>
+        <Button variant="outline" onClick={fetchAll}>Retry</Button>
       </div>
     )
   }
@@ -196,11 +188,11 @@ export function WardDetailClient({ wardId }: { wardId: string }) {
   const wardFloor = ward?.floor ? `${ward.floor}F` : "—"
   const wardIsActive = ward?.is_active ?? true
 
-  const editWardForModal = ward
+  const editWardForModal = useMemo(() => ward
     ? { id: ward.id, name: ward.name, floor: ward.floor?.toString() ?? "", status: (ward.is_active ? "Active" : "Inactive") as "Active" | "Inactive" }
-    : null
+    : null, [ward])
 
-  const editRoomForModal = editRoomTarget
+  const editRoomForModal = useMemo(() => editRoomTarget
     ? {
         room: editRoomTarget.name,
         ward: wardName,
@@ -210,7 +202,7 @@ export function WardDetailClient({ wardId }: { wardId: string }) {
         available: editRoomTarget.beds.length,
         status: (editRoomTarget.is_active ? "Active" : "Inactive") as "Active" | "Inactive",
       }
-    : null
+    : null, [editRoomTarget, wardName])
 
   return (
     <div className="space-y-6">

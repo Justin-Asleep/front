@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
@@ -125,12 +125,10 @@ export function AdmissionClient() {
       setWards(sorted)
       if (sorted.length === 0) return
       const firstWardId = sorted[0].id
+      setSelectedWardId(firstWardId)
       setLoading(true)
       try {
-        const [, rooms] = await Promise.all([
-          Promise.resolve(setSelectedWardId(firstWardId)),
-          apiGet<RoomAdmission[]>(`/proxy/wards/${firstWardId}/admission-status`),
-        ])
+        const rooms = await apiGet<RoomAdmission[]>(`/proxy/wards/${firstWardId}/admission-status`)
         setRooms(rooms)
       } finally {
         setLoading(false)
@@ -190,10 +188,11 @@ export function AdmissionClient() {
   }
 
   // Stats
-  const allBeds = rooms.flatMap((r) => r.beds)
-  const totalBeds = allBeds.length
-  const occupiedCount = allBeds.filter((b) => b.encounter !== null).length
-  const availableCount = totalBeds - occupiedCount
+  const { totalBeds, occupiedCount, availableCount } = useMemo(() => {
+    const allBeds = rooms.flatMap((r) => r.beds)
+    const occupied = allBeds.filter((b) => b.encounter !== null).length
+    return { totalBeds: allBeds.length, occupiedCount: occupied, availableCount: allBeds.length - occupied }
+  }, [rooms])
 
   return (
     <div className="space-y-6">
