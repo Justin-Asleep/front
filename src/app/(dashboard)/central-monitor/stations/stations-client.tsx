@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { toast } from "sonner"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -72,7 +73,7 @@ export function StationsClient() {
           `/proxy/monitors/stations?page=1&size=100`
         ),
         apiGet<PaginatedData<WardDTO>>(
-          `/proxy/wards?page=1&size=100`
+          `/proxy/wards?page=1&size=100&is_active=true`
         ),
       ])
       const wardMap = new Map(wardData.items.map((w) => [w.id, w.name]))
@@ -113,8 +114,10 @@ export function StationsClient() {
       })
       setEditTarget(null)
       await fetchStations()
+      toast.success("Station updated successfully")
     } catch (err) {
       console.error("Failed to update station:", err)
+      toast.error(err instanceof Error ? err.message : "Failed to update station")
     }
   }
 

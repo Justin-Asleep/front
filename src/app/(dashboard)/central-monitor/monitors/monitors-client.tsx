@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { toast } from "sonner"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -27,7 +28,7 @@ const EditMonitorModal = dynamic(
 )
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
 import { statusBadgeClass } from "@/helpers/status-badge"
-import { apiGet, apiPost, apiPatch, apiPut } from "@/services/api"
+import { apiGet, apiPost, apiPatch, apiPut, apiDelete, ApiError } from "@/services/api"
 
 interface AvailableBedDTO {
   id: string
@@ -50,15 +51,16 @@ interface MonitorDTO {
   is_active: boolean
 }
 
-interface MonitorBedDTO {
-  id: string
-  monitor_id: string
+interface MonitorBedDetailDTO {
   bed_id: string
   position: number
+  bed_label: string
+  patient_name: string | null
+  encounter_id: string | null
 }
 
-interface MonitorWithBedsDTO extends MonitorDTO {
-  beds: MonitorBedDTO[]
+interface MonitorDetailDTO extends MonitorDTO {
+  beds: MonitorBedDetailDTO[]
 }
 
 interface PaginatedData<T> {
@@ -125,9 +127,15 @@ export function MonitorsClient() {
   async function handleAdd(data: { name: string; layout: string }) {
     try {
       await apiPost(`/proxy/monitors`, { name: data.name, layout: data.layout })
+      setAddOpen(false)
       await fetchMonitors()
+      toast.success("Monitor created successfully")
     } catch (err) {
-      console.error("Failed to create monitor:", err)
+      if (err instanceof ApiError && err.errorCode === "DUPLICATE") {
+        toast.error("A monitor with this name already exists")
+      } else {
+        toast.error(err instanceof Error ? err.message : "Failed to create monitor")
+      }
     }
   }
 
@@ -135,7 +143,7 @@ export function MonitorsClient() {
     const all: AvailableBedDTO[] = []
     let cursor: string | null = null
     do {
-      const params = cursor ? `?cursor=${cursor}&limit=50` : `?limit=50`
+      const params: string = cursor ? `?cursor=${cursor}&limit=50` : `?limit=50`
       const res = await apiGet<CursorData<AvailableBedDTO>>(`/proxy/monitors/available-beds${params}`)
       all.push(...res.items)
       cursor = res.next_cursor
@@ -146,20 +154,18 @@ export function MonitorsClient() {
   async function handleOpenEdit(monitor: Monitor) {
     try {
       const [detail, beds] = await Promise.all([
-        apiGet<MonitorWithBedsDTO>(`/proxy/monitors/${monitor.id}`),
+        apiGet<MonitorDetailDTO>(`/proxy/monitors/${monitor.id}`),
         fetchAllAvailableBeds(),
       ])
       const mappedBedIds = new Set(detail.beds.map((b) => b.bed_id))
-      const bedMap = new Map(beds.map((b) => [b.id, b]))
-      const mappedSlots = new Map(detail.beds.map((mb) => [mb.position, mb]))
+      const detailMap = new Map(detail.beds.map((b) => [b.position, b]))
       const [cols, rows] = (monitor.layout.split("x").map(Number)) as [number, number]
       const totalSlots = cols * rows
       const slots = Array.from({ length: totalSlots }, (_, i) => {
         const pos = i + 1
-        const mb = mappedSlots.get(pos)
+        const mb = detailMap.get(pos)
         if (mb) {
-          const bed = bedMap.get(mb.bed_id)
-          return { position: pos, bedId: mb.bed_id, bedLabel: bed?.label ?? mb.bed_id, patient: bed?.patient_name ?? null }
+          return { position: pos, bedId: mb.bed_id, bedLabel: mb.bed_label, patient: mb.patient_name }
         }
         return { position: pos, bedId: null, bedLabel: null, patient: null }
       })
@@ -196,15 +202,26 @@ export function MonitorsClient() {
       ])
       setEditTarget(null)
       await fetchMonitors()
+      toast.success("Monitor updated successfully")
     } catch (err) {
-      console.error("Failed to update monitor:", err)
+      if (err instanceof ApiError && err.errorCode === "DUPLICATE") {
+        toast.error("A monitor with this name already exists")
+      } else {
+        toast.error(err instanceof Error ? err.message : "Failed to update monitor")
+      }
     }
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!deleteTarget) return
-    setMonitors((prev) => prev.filter((m) => m.id !== deleteTarget.id))
-    setDeleteTarget(null)
+    try {
+      await apiDelete(`/proxy/monitors/${deleteTarget.id}`)
+      setDeleteTarget(null)
+      await fetchMonitors()
+      toast.success("Monitor deleted successfully")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete monitor")
+    }
   }
 
   if (loading) {
