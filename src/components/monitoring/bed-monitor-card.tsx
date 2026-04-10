@@ -23,7 +23,6 @@ function EcgWaveform({ samples, totalReceived }: { samples?: number[], totalRece
   const samplesRef = useRef<number[]>([])
   const targetCountRef = useRef(0)
   const displayedCountRef = useRef(0)
-  const lastCursorRef = useRef(-1)
 
   // samples prop 동기화 — total_received를 기준으로 cursor 전진
   useEffect(() => {
@@ -52,10 +51,9 @@ function EcgWaveform({ samples, totalReceived }: { samples?: number[], totalRece
       getTargetCount: () => targetCountRef.current,
       getDisplayedCount: () => displayedCountRef.current,
       setDisplayedCount: (v) => { displayedCountRef.current = v },
-      lastCursorRef,
     }
 
-    // DPR 적용 = backing store 재설정 + transform 재호출 + 전체 재렌더 강제
+    // DPR 적용 = backing store 재설정 + transform 재호출
     const applyDpr = (cssWidth: number, cssHeight: number) => {
       const dpr = window.devicePixelRatio || 1
       canvas.width = Math.round(cssWidth * dpr)
@@ -63,7 +61,6 @@ function EcgWaveform({ samples, totalReceived }: { samples?: number[], totalRece
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       state.width = cssWidth
       state.height = cssHeight
-      lastCursorRef.current = -1
     }
 
     registerEcgCanvas(state)
