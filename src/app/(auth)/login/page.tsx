@@ -40,7 +40,7 @@ export default function LoginPage() {
           <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center text-3xl font-bold mb-8">
             +
           </div>
-          <h1 className="text-4xl font-bold mb-2">Vital Monitoring</h1>
+          <h1 className="text-4xl font-bold mb-2">A-Vital Monitoring</h1>
           <p className="text-[#d9e5ff] text-base text-center mb-1">Hospital Patient Vital Sign</p>
           <p className="text-[#d9e5ff] text-base text-center mb-8">Real-time Monitoring System</p>
 
@@ -118,7 +118,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <p className="absolute bottom-8 text-xs text-[#9ca3af]">
-          &copy; 2026 Vital Monitoring System. All rights reserved.
+          &copy; 2026 Asleep. All rights reserved.
         </p>
       </div>
     </div>

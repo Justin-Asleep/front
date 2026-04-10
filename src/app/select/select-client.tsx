@@ -77,7 +77,7 @@ export function SelectClient() {
                 {stations.map((s) => (
                   <button
                     key={s.id}
-                    onClick={() => router.push(`/monitor/${s.url_key}`)}
+                    onClick={() => router.push(`/station/${s.url_key}`)}
                     className="flex flex-col items-center gap-2 p-5 rounded-xl bg-[#0a0b1a] border border-[#1e1f35] hover:border-[#2563eb] hover:bg-[#0d0e24] transition-all group"
                   >
                     <Tv className="size-8 text-[#555] group-hover:text-[#2563eb] transition-colors" />

@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 import { Minimize, Maximize, ArrowLeft } from "lucide-react"
-import { apiGet } from "@/services/api"
 import { BedMonitorCard } from "@/components/monitoring/bed-monitor-card"
-import type { MonitorRealtime, RealtimeBed } from "@/types/monitor"
+import type { MonitorRealtime } from "@/types/monitor"
 import { useRouter } from "next/navigation"
+import { useSSE } from "@/hooks/use-sse"
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const bedGridStyle = { gridTemplateColumns: `repeat(auto-fill, minmax(560px, 1fr))` }
@@ -15,8 +15,92 @@ const bedGridStyle = { gridTemplateColumns: `repeat(auto-fill, minmax(560px, 1fr
 export function MonitorFullscreenClient({ urlKey }: { urlKey: string }) {
   const router = useRouter()
   const [realtimeData, setRealtimeData] = useState<MonitorRealtime | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+
+  const { connected, error } = useSSE<MonitorRealtime>({
+    path: `/sse/monitor/url/${urlKey}`,
+    onSnapshot: (data) => {
+      // 각 bed에 1500 samples (6초 @ 250Hz) baseline 값으로 ECG 초기화 → 첫 로드 시 일자 파형 표시
+      const initialized: MonitorRealtime = {
+        ...data,
+        beds: data.beds.map((bed) => ({
+          ...bed,
+          ecg: {
+            samples: new Array(1500).fill(512),
+            sample_rate_hz: 250,
+            measured_at: new Date().toISOString(),
+            total_received: 1500,
+          },
+        })),
+      }
+      setRealtimeData(initialized)
+    },
+    onVitals: (update) => {
+      console.log("[SSE vitals]", update)
+      setRealtimeData((prev) => {
+        if (!prev) return prev
+        const bedIds = prev.beds.map(b => b.bed_id)
+        const targetBed = prev.beds.find(b => b.bed_id === update.bed_id)
+        console.log("[SSE vitals] bedIds:", bedIds, "target:", update.bed_id, "found:", !!targetBed)
+        const newBeds = prev.beds.map((bed) => {
+          if (!bed.bed_id || update.bed_id !== bed.bed_id) return bed
+          const vitals = { ...(bed.vitals ?? {}) } as Record<string, unknown>
+          const t = update.type as string
+          if (t === "HR") vitals.hr = update.value
+          else if (t === "SPO2") vitals.spo2 = update.value
+          else if (t === "RR") vitals.rr = update.value
+          else if (t === "TEMP") vitals.temp = update.value
+          else if (t === "BP") {
+            vitals.bp_systolic = update.value
+            vitals.bp_diastolic = update.extra_value
+            const s = update.value as number, d = update.extra_value as number
+            vitals.bp_mean = s && d ? Math.round((s + 2 * d) / 3 * 10) / 10 : null
+          }
+          console.log("[SSE vitals] updated bed:", bed.bed_id, "new vitals:", vitals)
+          return { ...bed, vitals: vitals as unknown as typeof bed.vitals }
+        })
+        return { ...prev, beds: newBeds }
+      })
+    },
+    onAlarm: (update) => {
+      setRealtimeData((prev) => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          beds: prev.beds.map((bed) =>
+            bed.bed_id && update.bed_id === bed.bed_id
+              ? { ...bed, alarm_message: update.message as string }
+              : bed
+          ),
+        }
+      })
+    },
+    onEcg: (update) => {
+      setRealtimeData((prev) => {
+        if (!prev) return prev
+        const newSamples = update.samples as number[]
+        const sampleRate = update.sample_rate_hz as number
+        const maxSamples = sampleRate * 6 // 6초 rolling window
+        return {
+          ...prev,
+          beds: prev.beds.map((bed) => {
+            if (!bed.bed_id || update.bed_id !== bed.bed_id) return bed
+            const existing = bed.ecg?.samples ?? []
+            const merged = [...existing, ...newSamples].slice(-maxSamples)
+            const totalReceived = (bed.ecg?.total_received ?? 0) + newSamples.length
+            return {
+              ...bed,
+              ecg: {
+                samples: merged,
+                sample_rate_hz: sampleRate,
+                measured_at: update.measured_at as string,
+                total_received: totalReceived,
+              },
+            }
+          }),
+        }
+      })
+    },
+  })
 
   const containerRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -34,58 +118,6 @@ export function MonitorFullscreenClient({ urlKey }: { urlKey: string }) {
       document.exitFullscreen()
     }
   }, [])
-
-  // Fetch realtime data by urlKey
-  const fetchRealtime = useCallback(async () => {
-    try {
-      const data = await apiGet<MonitorRealtime>(`/proxy/monitors/url/${urlKey}/realtime`)
-      setRealtimeData(data)
-      setError(null)
-    } catch {
-      // TODO: remove mock data
-      const mockGenders = ["M", "F"]
-      const mockNames = ["김철수", "이영희", "박민수", "정수진", "최동혁", "강서연", "윤재호", "한미경"]
-      const mockBeds: RealtimeBed[] = Array.from({ length: 12 }, (_, i) => ({
-        position: i + 1,
-        bed_id: i < 10 ? `bed-${i + 1}` : null,
-        bed_label: i < 10 ? `${i + 1}번 병상` : null,
-        ward_name: i < 10 ? "내과 병동" : null,
-        room_name: i < 10 ? `${Math.floor(i / 4) + 1}01호` : null,
-        patient_name: i < 8 ? mockNames[i] : null,
-        patient_gender: i < 8 ? mockGenders[i % 2] : null,
-        patient_age: i < 8 ? 30 + Math.floor(Math.random() * 50) : null,
-        encounter_id: i < 8 ? `enc-${i + 1}` : null,
-        vitals: i < 7 ? {
-          hr: 60 + Math.random() * 40,
-          hr_range: { high: 100, low: 60 },
-          spo2: 94 + Math.random() * 6,
-          spo2_range: { high: 100, low: 90 },
-          rr: 12 + Math.random() * 10,
-          rr_range: { high: 22, low: 12 },
-          temp: 36 + Math.random() * 2,
-          temp_range: { high: 38, low: 36 },
-          bp_systolic: 110 + Math.random() * 30,
-          bp_diastolic: 60 + Math.random() * 20,
-          bp_mean: 80 + Math.random() * 15,
-          pvc: Math.floor(Math.random() * 10),
-          ews: Math.floor(Math.random() * 10),
-        } : null,
-        tablet: null,
-      }))
-      setRealtimeData({
-        monitor_id: "mock",
-        monitor_name: "Mock Monitor",
-        layout: "4x3",
-        beds: mockBeds,
-      })
-    } finally {
-      setLoading(false)
-    }
-  }, [urlKey])
-
-  useEffect(() => {
-    fetchRealtime()
-  }, [fetchRealtime])
 
   // ── Drag-to-scroll ──
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -123,7 +155,7 @@ export function MonitorFullscreenClient({ urlKey }: { urlKey: string }) {
     }
   }, [])
 
-  if (loading) {
+  if (!realtimeData && !error) {
     return (
       <div className="flex items-center justify-center h-screen bg-[#050510]">
         <p className="text-[#808099]">Loading monitor...</p>
@@ -131,7 +163,7 @@ export function MonitorFullscreenClient({ urlKey }: { urlKey: string }) {
     )
   }
 
-  if (error) {
+  if (!realtimeData && error) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-[#050510] gap-4">
         <p className="text-[#f87171]">{error}</p>
@@ -166,6 +198,9 @@ export function MonitorFullscreenClient({ urlKey }: { urlKey: string }) {
             </h1>
             <p className="text-xs text-[#808099]">
               {realtimeData?.beds.filter((b) => b.encounter_id).length ?? 0} beds connected
+              {!connected && error && (
+                <span className="ml-2 text-[#f59e0b]">{error}</span>
+              )}
             </p>
           </div>
         </div>

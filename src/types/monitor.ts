@@ -39,6 +39,13 @@ export interface TabletStatus {
   temp: SensorStatus | null
 }
 
+export interface EcgWaveform {
+  samples: number[]
+  sample_rate_hz: number
+  measured_at: string
+  total_received: number  // 누적 수신 샘플 수 (sliding window 크기와 무관, 계속 증가)
+}
+
 export interface RealtimeBed {
   position: number
   bed_id: string | null
@@ -51,12 +58,20 @@ export interface RealtimeBed {
   encounter_id: string | null
   vitals: RealtimeBedVitals | null
   tablet: TabletStatus | null
+  ecg?: EcgWaveform | null
 }
 
 export interface MonitorRealtime {
   monitor_id: string
   monitor_name: string
   layout: string
+  beds: RealtimeBed[]
+}
+
+export interface StationRealtime {
+  station_id: string
+  station_name: string
+  ward_name: string
   beds: RealtimeBed[]
 }
 

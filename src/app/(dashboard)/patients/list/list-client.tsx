@@ -20,7 +20,8 @@ import { PaginationBar } from "@/components/ui/pagination-bar"
 import { AddPatientModal } from "@/components/patients/add-patient-modal"
 import { EditPatientModal } from "@/components/patients/edit-patient-modal"
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
-import { apiGet, apiPost, apiPatch, apiDelete } from "@/services/api"
+import { apiGet, apiPost, apiPatch, apiDelete, ApiError } from "@/services/api"
+import { toast } from "sonner"
 
 interface PatientListItemDTO {
   id: string
@@ -146,7 +147,11 @@ export function PatientListClient() {
       setDeleteTarget(null)
       await fetchPatients()
     } catch (err) {
-      console.error("Failed to delete patient:", err)
+      if (err instanceof ApiError && err.errorCode === "PATIENT_ADMITTED") {
+        toast.error("Cannot delete: patient is currently admitted")
+      } else {
+        toast.error(err instanceof Error ? err.message : "Failed to delete patient")
+      }
     }
   }
 

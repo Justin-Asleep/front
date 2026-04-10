@@ -176,7 +176,6 @@ export function AlarmSettingsClient() {
           </Table>
 
           <div className="flex justify-end gap-3 px-6 h-[64px] items-center border-t border-[#e5e7eb]">
-            <Button variant="outline" onClick={fetchData}>Cancel</Button>
             <Button
               className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white"
               onClick={handleSave}

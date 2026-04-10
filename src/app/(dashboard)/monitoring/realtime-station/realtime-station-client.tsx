@@ -242,7 +242,7 @@ const OccupiedBedCard = React.memo(function OccupiedBedCard({ bed, onClick }: { 
                 t?.battery != null && t.battery < 60 ? "text-status-warning" :
                 "text-muted-foreground"
               )}>
-                {t ? `${t.serial_number} ${t.battery ?? "--"}` : "--"}
+                {t ? `${t.serial_number} ${t.battery != null ? `${t.battery}%` : "--"}` : "--"}
               </span>
             </div>
             <div className="ml-auto flex items-center gap-2">

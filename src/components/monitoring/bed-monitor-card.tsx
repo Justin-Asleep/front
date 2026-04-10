@@ -1,21 +1,62 @@
 "use client"
 
-import React from "react"
+import React, { useEffect, useRef } from "react"
 import { cn } from "@/lib/utils"
+import { registerEcgCanvas, unregisterEcgCanvas, type EcgRenderState } from "@/lib/ecg-render-loop"
 import type { RealtimeBed } from "@/types/monitor"
 
-// ── ECG Waveform ──────────────────────────────────────────────────────────────
-function EcgWaveform({ className }: { className?: string }) {
+// ── Animated value ────────────────────────────────────────────────────────────
+// key를 value로 주면 값 변경 시 DOM이 재생성되어 애니메이션이 다시 트리거됨
+function AnimatedValue({ value, className }: { value: string | number, className: string }) {
   return (
-    <svg viewBox="0 0 476 60" className={cn("w-full", className)} preserveAspectRatio="none">
-      <polyline
-        fill="none"
-        stroke="#4ade80"
-        strokeWidth="1.5"
-        points="0,30 40,30 50,30 55,28 60,30 70,30 75,30 80,10 85,50 90,5 95,55 100,30 110,30 150,30 160,30 165,28 170,30 180,30 185,30 190,10 195,50 200,5 205,55 210,30 220,30 260,30 270,30 275,28 280,30 290,30 295,30 300,10 305,50 310,5 315,55 320,30 330,30 370,30 380,30 385,28 390,30 400,30 405,30 410,10 415,50 420,5 425,55 430,30 440,30 476,30"
-      />
-    </svg>
+    <span key={String(value)} className={cn(className, "inline-block animate-vital-flash")}>
+      {value}
+    </span>
   )
+}
+
+// ── ECG Waveform ──────────────────────────────────────────────────────────────
+// IEC 60601-2-27 compliant Blank Gap Sweep Mode.
+// 전역 공유 rAF 루프 + Dirty Rectangle 최적화로 64+ beds 동시 렌더 지원.
+function EcgWaveform({ samples, totalReceived }: { samples?: number[], totalReceived?: number }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const samplesRef = useRef<number[]>([])
+  const targetCountRef = useRef(0)
+  const displayedCountRef = useRef(0)
+  const lastCursorRef = useRef(-1)
+
+  // samples prop 동기화 — total_received를 기준으로 cursor 전진
+  useEffect(() => {
+    if (!samples) return
+    samplesRef.current = samples
+    const total = totalReceived ?? samples.length
+    if (displayedCountRef.current === 0) {
+      displayedCountRef.current = total
+    }
+    targetCountRef.current = total
+  }, [samples, totalReceived])
+
+  // 공유 rAF 루프에 등록
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext("2d", { willReadFrequently: false })
+    if (!ctx) return
+
+    const state: EcgRenderState = {
+      canvas,
+      ctx,
+      getSamples: () => samplesRef.current,
+      getTargetCount: () => targetCountRef.current,
+      getDisplayedCount: () => displayedCountRef.current,
+      setDisplayedCount: (v) => { displayedCountRef.current = v },
+      lastCursorRef,
+    }
+    registerEcgCanvas(state)
+    return () => unregisterEcgCanvas(state)
+  }, [])
+
+  return <canvas ref={canvasRef} width={476} height={60} className="w-full h-[60px]" />
 }
 
 // ── Bed Monitor Card ──────────────────────────────────────────────────────────
@@ -70,7 +111,7 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({ bed }: { bed:
             <span className="text-[8px] text-[#808099]">bpm</span>
           </div>
           <p className={cn("text-[42px] font-bold leading-none tracking-tight", v?.hr != null ? "text-[#22c55e]" : "text-[#333] animate-pulse")}>
-            {v?.hr != null ? Math.round(v.hr) : "--"}
+            {v?.hr != null ? <AnimatedValue value={Math.round(v.hr)} className="" /> : "--"}
           </p>
           {v?.hr_range && (
             <span className="text-[9px] text-[#555] font-mono mt-1">
@@ -96,7 +137,7 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({ bed }: { bed:
             <span className="text-[10px] font-semibold text-[#4ade80]">ECG</span>
           </div>
           <div className="flex-1 flex items-center px-2">
-            <EcgWaveform className="h-[60px]" />
+            <EcgWaveform samples={bed.ecg?.samples} totalReceived={bed.ecg?.total_received} />
           </div>
         </div>
 
@@ -107,7 +148,7 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({ bed }: { bed:
               <span className="text-[7px] text-[#555]">/min</span>
             </div>
             <p className={cn("text-[18px] font-bold leading-none mt-0.5", v?.rr != null ? "text-[#fbbf24]" : "text-[#333] animate-pulse")}>
-              {v?.rr != null ? Math.round(v.rr) : "--"}
+              {v?.rr != null ? <AnimatedValue value={Math.round(v.rr)} className="" /> : "--"}
             </p>
           </div>
 
@@ -117,7 +158,7 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({ bed }: { bed:
               <span className="text-[7px] text-[#555]">%</span>
             </div>
             <p className={cn("text-[18px] font-bold leading-none mt-0.5", v?.spo2 != null ? "text-[#38bdf8]" : "text-[#333] animate-pulse")}>
-              {v?.spo2 != null ? Math.round(v.spo2) : "--"}
+              {v?.spo2 != null ? <AnimatedValue value={Math.round(v.spo2)} className="" /> : "--"}
             </p>
           </div>
 
@@ -127,7 +168,7 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({ bed }: { bed:
               <span className="text-[7px] text-[#555]">°C</span>
             </div>
             <p className={cn("text-[18px] font-bold leading-none mt-0.5", v?.temp != null ? "text-[#a78bfb]" : "text-[#333] animate-pulse")}>
-              {v?.temp != null ? v.temp.toFixed(1) : "--"}
+              {v?.temp != null ? <AnimatedValue value={v.temp.toFixed(1)} className="" /> : "--"}
             </p>
           </div>
 
@@ -138,7 +179,7 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({ bed }: { bed:
             </div>
             <p className={cn("text-[16px] font-bold leading-none mt-0.5", v?.bp_systolic != null ? "text-[#f87171]" : "text-[#333] animate-pulse")}>
               {v?.bp_systolic != null
-                ? `${Math.round(v.bp_systolic)}/${Math.round(v.bp_diastolic ?? 0)}`
+                ? <AnimatedValue value={`${Math.round(v.bp_systolic)}/${Math.round(v.bp_diastolic ?? 0)}`} className="" />
                 : "--"}
             </p>
           </div>

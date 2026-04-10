@@ -24,7 +24,7 @@ export function HeaderNav({ variant = "default", showTabs = true, subtitle }: He
   return (
     <header className={cn("h-16 flex items-center px-6 shrink-0", isDark ? "bg-[#0a0b1a] border-b border-[#1e1f35]" : "bg-[#2563EB]")}>
       <div className="text-white font-bold text-base mr-8 shrink-0">
-        Vital Monitoring
+        A-Vital Monitoring
       </div>
 
       {showTabs ? (
