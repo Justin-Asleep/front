@@ -6,7 +6,7 @@ import { Minimize, Maximize, ArrowLeft } from "lucide-react"
 import { BedMonitorCard } from "@/components/monitoring/bed-monitor-card"
 import type { MonitorRealtime } from "@/types/monitor"
 import { useRouter } from "next/navigation"
-import { useSSE } from "@/hooks/use-sse"
+import { useBedRealtimeSSE } from "@/hooks/use-bed-realtime-sse"
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const bedGridStyle = { gridTemplateColumns: `repeat(auto-fill, minmax(560px, 1fr))` }
@@ -14,93 +14,9 @@ const bedGridStyle = { gridTemplateColumns: `repeat(auto-fill, minmax(560px, 1fr
 // ── Fullscreen Monitor Client ─────────────────────────────────────────────────
 export function MonitorFullscreenClient({ urlKey }: { urlKey: string }) {
   const router = useRouter()
-  const [realtimeData, setRealtimeData] = useState<MonitorRealtime | null>(null)
-
-  const { connected, error } = useSSE<MonitorRealtime>({
-    path: `/sse/monitor/url/${urlKey}`,
-    onSnapshot: (data) => {
-      // 각 bed에 1500 samples (6초 @ 250Hz) baseline 값으로 ECG 초기화 → 첫 로드 시 일자 파형 표시
-      const initialized: MonitorRealtime = {
-        ...data,
-        beds: data.beds.map((bed) => ({
-          ...bed,
-          ecg: {
-            samples: new Array(1500).fill(512),
-            sample_rate_hz: 250,
-            measured_at: new Date().toISOString(),
-            total_received: 1500,
-          },
-        })),
-      }
-      setRealtimeData(initialized)
-    },
-    onVitals: (update) => {
-      console.log("[SSE vitals]", update)
-      setRealtimeData((prev) => {
-        if (!prev) return prev
-        const bedIds = prev.beds.map(b => b.bed_id)
-        const targetBed = prev.beds.find(b => b.bed_id === update.bed_id)
-        console.log("[SSE vitals] bedIds:", bedIds, "target:", update.bed_id, "found:", !!targetBed)
-        const newBeds = prev.beds.map((bed) => {
-          if (!bed.bed_id || update.bed_id !== bed.bed_id) return bed
-          const vitals = { ...(bed.vitals ?? {}) } as Record<string, unknown>
-          const t = update.type as string
-          if (t === "HR") vitals.hr = update.value
-          else if (t === "SPO2") vitals.spo2 = update.value
-          else if (t === "RR") vitals.rr = update.value
-          else if (t === "TEMP") vitals.temp = update.value
-          else if (t === "BP") {
-            vitals.bp_systolic = update.value
-            vitals.bp_diastolic = update.extra_value
-            const s = update.value as number, d = update.extra_value as number
-            vitals.bp_mean = s && d ? Math.round((s + 2 * d) / 3 * 10) / 10 : null
-          }
-          console.log("[SSE vitals] updated bed:", bed.bed_id, "new vitals:", vitals)
-          return { ...bed, vitals: vitals as unknown as typeof bed.vitals }
-        })
-        return { ...prev, beds: newBeds }
-      })
-    },
-    onAlarm: (update) => {
-      setRealtimeData((prev) => {
-        if (!prev) return prev
-        return {
-          ...prev,
-          beds: prev.beds.map((bed) =>
-            bed.bed_id && update.bed_id === bed.bed_id
-              ? { ...bed, alarm_message: update.message as string }
-              : bed
-          ),
-        }
-      })
-    },
-    onEcg: (update) => {
-      setRealtimeData((prev) => {
-        if (!prev) return prev
-        const newSamples = update.samples as number[]
-        const sampleRate = update.sample_rate_hz as number
-        const maxSamples = sampleRate * 6 // 6초 rolling window
-        return {
-          ...prev,
-          beds: prev.beds.map((bed) => {
-            if (!bed.bed_id || update.bed_id !== bed.bed_id) return bed
-            const existing = bed.ecg?.samples ?? []
-            const merged = [...existing, ...newSamples].slice(-maxSamples)
-            const totalReceived = (bed.ecg?.total_received ?? 0) + newSamples.length
-            return {
-              ...bed,
-              ecg: {
-                samples: merged,
-                sample_rate_hz: sampleRate,
-                measured_at: update.measured_at as string,
-                total_received: totalReceived,
-              },
-            }
-          }),
-        }
-      })
-    },
-  })
+  const { data: realtimeData, connected, error } = useBedRealtimeSSE<MonitorRealtime>(
+    `/sse/monitor/url/${urlKey}`
+  )
 
   const containerRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)

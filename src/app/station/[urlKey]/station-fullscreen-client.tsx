@@ -6,7 +6,7 @@ import { Minimize, Maximize, ArrowLeft } from "lucide-react"
 import { BedMonitorCard } from "@/components/monitoring/bed-monitor-card"
 import type { StationRealtime } from "@/types/monitor"
 import { useRouter } from "next/navigation"
-import { useSSE } from "@/hooks/use-sse"
+import { useBedRealtimeSSE } from "@/hooks/use-bed-realtime-sse"
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const CARD_MIN_WIDTH = 560
@@ -25,51 +25,11 @@ function calcBedsPerPage(width: number, height: number): number {
 // ── Fullscreen Station Client ────────────────────────────────────────────────
 export function StationFullscreenClient({ urlKey }: { urlKey: string }) {
   const router = useRouter()
-  const [realtimeData, setRealtimeData] = useState<StationRealtime | null>(null)
+  const { data: realtimeData, connected, error } = useBedRealtimeSSE<StationRealtime>(
+    `/sse/station/url/${urlKey}`
+  )
   const [currentPage, setCurrentPage] = useState(1)
   const [bedsPerPage, setBedsPerPage] = useState(12)
-
-  const { connected, error } = useSSE<StationRealtime>({
-    path: `/sse/station/url/${urlKey}`,
-    onSnapshot: (data) => setRealtimeData(data),
-    onVitals: (update) => {
-      setRealtimeData((prev) => {
-        if (!prev) return prev
-        return {
-          ...prev,
-          beds: prev.beds.map((bed) => {
-            if (!bed.bed_id || update.bed_id !== bed.bed_id) return bed
-            const vitals = { ...(bed.vitals ?? {}) } as Record<string, unknown>
-            const t = update.type as string
-            if (t === "HR") vitals.hr = update.value
-            else if (t === "SPO2") vitals.spo2 = update.value
-            else if (t === "RR") vitals.rr = update.value
-            else if (t === "TEMP") vitals.temp = update.value
-            else if (t === "BP") {
-              vitals.bp_systolic = update.value
-              vitals.bp_diastolic = update.extra_value
-              const s = update.value as number, d = update.extra_value as number
-              vitals.bp_mean = s && d ? Math.round((s + 2 * d) / 3 * 10) / 10 : null
-            }
-            return { ...bed, vitals: vitals as unknown as typeof bed.vitals }
-          }),
-        }
-      })
-    },
-    onAlarm: (update) => {
-      setRealtimeData((prev) => {
-        if (!prev) return prev
-        return {
-          ...prev,
-          beds: prev.beds.map((bed) =>
-            bed.bed_id && update.bed_id === bed.bed_id
-              ? { ...bed, alarm_message: update.message as string }
-              : bed
-          ),
-        }
-      })
-    },
-  })
 
   const containerRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)

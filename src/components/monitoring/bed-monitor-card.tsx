@@ -1,9 +1,9 @@
 "use client"
 
-import React, {useEffect, useRef} from "react"
+import React from "react"
 import { cn } from "@/lib/utils"
 import type { RealtimeBed } from "@/types/monitor"
-import {EcgRenderState, registerEcgCanvas, unregisterEcgCanvas} from "@/lib/ecg-render-loop";
+import { EcgWaveform } from "@/components/monitoring/ecg-waveform"
 
 // ── Animated value ────────────────────────────────────────────────────────────
 // key를 value로 주면 값 변경 시 DOM이 재생성되어 애니메이션이 다시 트리거됨
@@ -13,89 +13,6 @@ function AnimatedValue({ value, className }: { value: string | number, className
       {value}
     </span>
   )
-}
-
-// ── ECG Waveform ──────────────────────────────────────────────────────────────
-// IEC 60601-2-27 compliant Blank Gap Sweep Mode.
-// 전역 공유 rAF 루프 + Dirty Rectangle 최적화로 64+ beds 동시 렌더 지원.
-function EcgWaveform({ samples, totalReceived }: { samples?: number[], totalReceived?: number }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const samplesRef = useRef<number[]>([])
-  const targetCountRef = useRef(0)
-  const displayedCountRef = useRef(0)
-
-  // samples prop 동기화 — total_received를 기준으로 cursor 전진
-  useEffect(() => {
-    if (!samples) return
-    samplesRef.current = samples
-    const total = totalReceived ?? samples.length
-    if (displayedCountRef.current === 0) {
-      displayedCountRef.current = total
-    }
-    targetCountRef.current = total
-  }, [samples, totalReceived])
-
-  // 공유 rAF 루프에 등록
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext("2d", { willReadFrequently: false })
-    if (!ctx) return
-
-    const state: EcgRenderState = {
-      canvas,
-      ctx,
-      width: 0,   // 0 = render loop에서 skip됨 (ResizeObserver 첫 callback 전)
-      height: 0,
-      getSamples: () => samplesRef.current,
-      getTargetCount: () => targetCountRef.current,
-      getDisplayedCount: () => displayedCountRef.current,
-      setDisplayedCount: (v) => { displayedCountRef.current = v },
-    }
-
-    // DPR 적용 = backing store 재설정 + transform 재호출
-    const applyDpr = (cssWidth: number, cssHeight: number) => {
-      const dpr = window.devicePixelRatio || 1
-      canvas.width = Math.round(cssWidth * dpr)
-      canvas.height = Math.round(cssHeight * dpr)
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      state.width = cssWidth
-      state.height = cssHeight
-    }
-
-    registerEcgCanvas(state)
-
-    // ResizeObserver가 첫 callback에서 최종 flex layout 크기를 보고 → 그 시점에 backing store 확정
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0]
-      if (!entry) return
-      const { width: w, height: h } = entry.contentRect
-      if (w <= 0 || h <= 0) return
-      applyDpr(w, h)
-    })
-    observer.observe(canvas)
-
-    // DPR 변화 감지 (외부 모니터 이동 등) — matchMedia는 특정 DPR 값에 bound되므로 변경 시 재생성
-    let mql: MediaQueryList | null = null
-    const onDprChange = () => {
-      if (state.width > 0 && state.height > 0) {
-        applyDpr(state.width, state.height)
-      }
-      mql?.removeEventListener("change", onDprChange)
-      mql = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`)
-      mql.addEventListener("change", onDprChange)
-    }
-    mql = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`)
-    mql.addEventListener("change", onDprChange)
-
-    return () => {
-      observer.disconnect()
-      mql?.removeEventListener("change", onDprChange)
-      unregisterEcgCanvas(state)
-    }
-  }, [])
-
-  return <canvas ref={canvasRef} className="block w-full h-[80px]" />
 }
 
 // ── Bed Monitor Card ──────────────────────────────────────────────────────────

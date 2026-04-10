@@ -45,8 +45,6 @@ function renderBed(state: EcgRenderState, deltaSec: number) {
   // ResizeObserver 첫 fire 전에는 backing store가 미확정 — skip
   if (width <= 0 || height <= 0) return
 
-  const samples = getSamples()
-
   // displayedCount를 target까지 초당 250 samples 속도로 전진
   const target = getTargetCount()
   const displayed = getDisplayedCount()
@@ -54,14 +52,11 @@ function renderBed(state: EcgRenderState, deltaSec: number) {
     setDisplayedCount(Math.min(displayed + SAMPLES_PER_SEC * deltaSec, target))
   }
 
+  // 샘플이 비어있으면 캔버스를 비워두고 끝 — flat line 은 asystole 패턴이라 금지.
+  // placeholder UI 는 EcgWaveform 컴포넌트의 오버레이가 담당.
+  const samples = getSamples()
   if (!samples || samples.length === 0) {
     ctx.clearRect(0, 0, width, height)
-    ctx.strokeStyle = "#1e1f35"
-    ctx.lineWidth = 1
-    ctx.beginPath()
-    ctx.moveTo(0, height / 2)
-    ctx.lineTo(width, height / 2)
-    ctx.stroke()
     return
   }
 
