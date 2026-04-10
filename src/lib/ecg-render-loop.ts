@@ -4,6 +4,8 @@
 export interface EcgRenderState {
   canvas: HTMLCanvasElement
   ctx: CanvasRenderingContext2D
+  width: number  // CSS pixels — drawing coord system (ctx는 DPR로 scaled)
+  height: number // CSS pixels
   getSamples: () => number[]
   getTargetCount: () => number
   getDisplayedCount: () => number
@@ -11,10 +13,8 @@ export interface EcgRenderState {
   lastCursorRef: { current: number }
 }
 
-const WIDTH = 476
-const HEIGHT = 60
 const DISPLAY_SAMPLES = 1500
-const GAP_SAMPLES = 60
+const GAP_SAMPLES = 30
 const SAMPLES_PER_SEC = 250
 
 // Fixed vertical scale (clinical ECG convention — 10mm/mV 고정 gain)
@@ -41,7 +41,11 @@ function loop() {
 }
 
 function renderBed(state: EcgRenderState, deltaSec: number) {
-  const { ctx, getSamples, getTargetCount, getDisplayedCount, setDisplayedCount, lastCursorRef } = state
+  const { ctx, width, height, getSamples, getTargetCount, getDisplayedCount, setDisplayedCount, lastCursorRef } = state
+
+  // Canvas가 아직 측정되지 않았으면 skip (ResizeObserver 첫 callback 전)
+  if (width <= 0 || height <= 0) return
+
   const samples = getSamples()
 
   // displayedCount를 target까지 초당 250 samples 속도로 전진
@@ -53,12 +57,12 @@ function renderBed(state: EcgRenderState, deltaSec: number) {
 
   if (!samples || samples.length === 0) {
     // baseline line
-    ctx.clearRect(0, 0, WIDTH, HEIGHT)
+    ctx.clearRect(0, 0, width, height)
     ctx.strokeStyle = "#1e1f35"
     ctx.lineWidth = 1
     ctx.beginPath()
-    ctx.moveTo(0, HEIGHT / 2)
-    ctx.lineTo(WIDTH, HEIGHT / 2)
+    ctx.moveTo(0, height / 2)
+    ctx.lineTo(width, height / 2)
     ctx.stroke()
     return
   }
@@ -67,25 +71,22 @@ function renderBed(state: EcgRenderState, deltaSec: number) {
   const currentCursor = totalDisplayed % DISPLAY_SAMPLES
   const lastCursor = lastCursorRef.current
 
-  // 첫 렌더 또는 wrap around 시 전체 재그리기
-  if (lastCursor < 0 || currentCursor < lastCursor) {
-    drawFullBuffer(ctx, samples, totalDisplayed, target, currentCursor)
+  if (lastCursor < 0) {
+    drawFullBuffer(ctx, width, height, samples, totalDisplayed, target, currentCursor)
   } else if (currentCursor > lastCursor) {
-    // Dirty rectangle: [lastCursor+1, currentCursor+GAP+1] 구간만 다시 그림
-    drawDirtyRegion(ctx, samples, totalDisplayed, target, lastCursor, currentCursor)
+    drawDirtyRegion(ctx, width, height, samples, totalDisplayed, target, lastCursor, currentCursor)
+  } else if (currentCursor < lastCursor) {
+    // Wrap-around: 두 조각으로 분리
+    drawDirtyRegion(ctx, width, height, samples, totalDisplayed, target, lastCursor, DISPLAY_SAMPLES - 1)
+    drawDirtyRegion(ctx, width, height, samples, totalDisplayed, target, -1, currentCursor)
   }
 
   lastCursorRef.current = currentCursor
 }
 
-function sampleToY(v: number): number {
-  // 클램핑
+function sampleToY(v: number, height: number): number {
   const clamped = Math.max(ECG_MIN, Math.min(ECG_MAX, v))
-  return HEIGHT - ((clamped - ECG_MIN) / ECG_RANGE) * HEIGHT
-}
-
-function cursorToX(cursorIdx: number): number {
-  return (cursorIdx / DISPLAY_SAMPLES) * WIDTH
+  return height - ((clamped - ECG_MIN) / ECG_RANGE) * height
 }
 
 function getSampleAt(
@@ -94,11 +95,7 @@ function getSampleAt(
   totalReceived: number,
   bufferPos: number,
 ): number | null {
-  // samples는 sliding window (최신 N개). totalReceived는 누적 수신 수.
-  // samples[samples.length-1] = totalReceived-1 (최신)
-  // samples[0] = totalReceived-samples.length (윈도우 시작)
   const cursor = totalDisplayed % DISPLAY_SAMPLES
-  // offsetFromCursor: 0 = cursor(최신), 증가할수록 과거
   const offsetFromCursor = (cursor - bufferPos + DISPLAY_SAMPLES) % DISPLAY_SAMPLES
   const absoluteIdx = totalDisplayed - 1 - offsetFromCursor
   if (absoluteIdx < 0) return null
@@ -108,81 +105,125 @@ function getSampleAt(
   return samples[arrIdx]
 }
 
+// per-CSS-pixel min/max decimation — QRS 피크 보존 + sub-pixel AA 제거
+// 픽셀 컬럼 단위로 순회하며 yMin/yMax 수집 후 수직 세그먼트로 표현.
+// caller가 beginPath/stroke를 담당; 이 함수는 path 명령만 추가.
+function drawDecimated(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  samples: number[],
+  totalDisplayed: number,
+  totalReceived: number,
+  iFrom: number,
+  iTo: number,
+  stepPx: number,
+  inGap: (i: number) => boolean,
+) {
+  if (iFrom > iTo) return
+  const pxStart = Math.max(0, Math.floor(iFrom * stepPx))
+  const pxEnd = Math.min(Math.ceil(width) - 1, Math.floor(iTo * stepPx))
+
+  let pen = false
+  for (let px = pxStart; px <= pxEnd; px++) {
+    // 이 CSS 픽셀 컬럼에 매핑되는 sample index 범위
+    const iMin = Math.max(iFrom, Math.ceil(px / stepPx))
+    const iMax = Math.min(iTo, Math.ceil((px + 1) / stepPx) - 1)
+    if (iMin > iMax) continue
+
+    let yMin = Infinity
+    let yMax = -Infinity
+    let lastY = 0
+    let hasAny = false
+    for (let i = iMin; i <= iMax; i++) {
+      if (inGap(i)) continue
+      const v = getSampleAt(samples, totalDisplayed, totalReceived, i)
+      if (v == null) continue
+      const y = sampleToY(v, height)
+      if (y < yMin) yMin = y
+      if (y > yMax) yMax = y
+      lastY = y
+      hasAny = true
+    }
+    if (!hasAny) {
+      pen = false
+      continue
+    }
+
+    // half-pixel 정렬: lineWidth=1 선이 정확히 1 backing pixel에 맞음
+    const drawX = px + 0.5
+    const yMinA = Math.round(yMin) + 0.5
+    const yMaxA = Math.round(yMax) + 0.5
+    const lastYA = Math.round(lastY) + 0.5
+
+    if (!pen) {
+      ctx.moveTo(drawX, lastYA)
+      pen = true
+    } else {
+      ctx.lineTo(drawX, lastYA)
+    }
+
+    // QRS spike 등 급격한 변화: yMin~yMax 세로 span 추가 후 lastY로 복귀
+    if (yMaxA - yMinA >= 2) {
+      ctx.lineTo(drawX, yMinA)
+      ctx.lineTo(drawX, yMaxA)
+      ctx.lineTo(drawX, lastYA)
+    }
+  }
+}
+
 function drawFullBuffer(
   ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
   samples: number[],
   totalDisplayed: number,
   totalReceived: number,
   cursor: number,
 ) {
-  ctx.clearRect(0, 0, WIDTH, HEIGHT)
+  ctx.clearRect(0, 0, width, height)
   ctx.strokeStyle = "#4ade80"
-  ctx.lineWidth = 1.5
+  ctx.lineWidth = 1
 
-  const stepPx = WIDTH / DISPLAY_SAMPLES
+  const stepPx = width / DISPLAY_SAMPLES
   const gapStart = (cursor + 1) % DISPLAY_SAMPLES
   const gapEnd = (cursor + GAP_SAMPLES) % DISPLAY_SAMPLES
+  const inGap = (i: number) =>
+    gapStart <= gapEnd ? (i >= gapStart && i <= gapEnd) : (i >= gapStart || i <= gapEnd)
 
   ctx.beginPath()
-  let penDown = false
-  for (let i = 0; i < DISPLAY_SAMPLES; i++) {
-    const inGap = gapStart <= gapEnd ? (i >= gapStart && i <= gapEnd) : (i >= gapStart || i <= gapEnd)
-    if (inGap) {
-      penDown = false
-      continue
-    }
-    const v = getSampleAt(samples, totalDisplayed, totalReceived, i)
-    if (v == null) {
-      penDown = false
-      continue
-    }
-    const x = i * stepPx
-    const y = sampleToY(v)
-    if (!penDown) {
-      ctx.moveTo(x, y)
-      penDown = true
-    } else {
-      ctx.lineTo(x, y)
-    }
-  }
+  drawDecimated(ctx, width, height, samples, totalDisplayed, totalReceived, 0, DISPLAY_SAMPLES - 1, stepPx, inGap)
   ctx.stroke()
 }
 
 function drawDirtyRegion(
   ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
   samples: number[],
   totalDisplayed: number,
   totalReceived: number,
   lastCursor: number,
   currentCursor: number,
 ) {
-  const stepPx = WIDTH / DISPLAY_SAMPLES
-  const dirtyStart = lastCursor + 1
-  const dirtyEnd = Math.min(DISPLAY_SAMPLES, currentCursor + GAP_SAMPLES + 2)
-  const dirtyX = dirtyStart * stepPx
-  const dirtyW = (dirtyEnd - dirtyStart) * stepPx + 2
+  const stepPx = width / DISPLAY_SAMPLES
 
-  ctx.clearRect(dirtyX - 1, 0, dirtyW, HEIGHT)
+  // clearRect: lastCursor 픽셀부터 포함 + 정수 backing pixel 정렬 + GAP margin
+  const clearStartPx = Math.max(0, Math.floor(lastCursor * stepPx) - 1)
+  const clearEndPx = Math.min(
+    width,
+    Math.ceil((currentCursor + GAP_SAMPLES + 1) * stepPx) + 1,
+  )
+  if (clearEndPx > clearStartPx) {
+    ctx.clearRect(clearStartPx, 0, clearEndPx - clearStartPx, height)
+  }
 
   ctx.strokeStyle = "#4ade80"
-  ctx.lineWidth = 1.5
+  ctx.lineWidth = 1
+
   ctx.beginPath()
-  let penDown = false
-  for (let i = dirtyStart; i <= currentCursor; i++) {
-    const v = getSampleAt(samples, totalDisplayed, totalReceived, i)
-    if (v == null) {
-      penDown = false
-      continue
-    }
-    const x = i * stepPx
-    const y = sampleToY(v)
-    if (!penDown) {
-      ctx.moveTo(x, y)
-      penDown = true
-    } else {
-      ctx.lineTo(x, y)
-    }
-  }
+  // lastCursor+1부터 시작 — seam 재그리기 없이 clearRect가 이전 stroke를 완전히 덮음
+  drawDecimated(ctx, width, height, samples, totalDisplayed, totalReceived, lastCursor + 1, currentCursor, stepPx, () => false)
   ctx.stroke()
 }
 

@@ -1,9 +1,9 @@
 "use client"
 
-import React, { useEffect, useRef } from "react"
+import React, {useEffect, useRef} from "react"
 import { cn } from "@/lib/utils"
-import { registerEcgCanvas, unregisterEcgCanvas, type EcgRenderState } from "@/lib/ecg-render-loop"
 import type { RealtimeBed } from "@/types/monitor"
+import {EcgRenderState, registerEcgCanvas, unregisterEcgCanvas} from "@/lib/ecg-render-loop";
 
 // ── Animated value ────────────────────────────────────────────────────────────
 // key를 value로 주면 값 변경 시 DOM이 재생성되어 애니메이션이 다시 트리거됨
@@ -46,17 +46,59 @@ function EcgWaveform({ samples, totalReceived }: { samples?: number[], totalRece
     const state: EcgRenderState = {
       canvas,
       ctx,
+      width: 0,   // 0 = render loop에서 skip됨 (ResizeObserver 첫 callback 전)
+      height: 0,
       getSamples: () => samplesRef.current,
       getTargetCount: () => targetCountRef.current,
       getDisplayedCount: () => displayedCountRef.current,
       setDisplayedCount: (v) => { displayedCountRef.current = v },
       lastCursorRef,
     }
+
+    // DPR 적용 = backing store 재설정 + transform 재호출 + 전체 재렌더 강제
+    const applyDpr = (cssWidth: number, cssHeight: number) => {
+      const dpr = window.devicePixelRatio || 1
+      canvas.width = Math.round(cssWidth * dpr)
+      canvas.height = Math.round(cssHeight * dpr)
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      state.width = cssWidth
+      state.height = cssHeight
+      lastCursorRef.current = -1
+    }
+
     registerEcgCanvas(state)
-    return () => unregisterEcgCanvas(state)
+
+    // ResizeObserver가 첫 callback에서 최종 flex layout 크기를 보고 → 그 시점에 backing store 확정
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0]
+      if (!entry) return
+      const { width: w, height: h } = entry.contentRect
+      if (w <= 0 || h <= 0) return
+      applyDpr(w, h)
+    })
+    observer.observe(canvas)
+
+    // DPR 변화 감지 (외부 모니터 이동 등) — matchMedia는 특정 DPR 값에 bound되므로 변경 시 재생성
+    let mql: MediaQueryList | null = null
+    const onDprChange = () => {
+      if (state.width > 0 && state.height > 0) {
+        applyDpr(state.width, state.height)
+      }
+      mql?.removeEventListener("change", onDprChange)
+      mql = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`)
+      mql.addEventListener("change", onDprChange)
+    }
+    mql = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`)
+    mql.addEventListener("change", onDprChange)
+
+    return () => {
+      observer.disconnect()
+      mql?.removeEventListener("change", onDprChange)
+      unregisterEcgCanvas(state)
+    }
   }, [])
 
-  return <canvas ref={canvasRef} width={476} height={60} className="w-full h-[60px]" />
+  return <canvas ref={canvasRef} className="block w-full h-[80px]" />
 }
 
 // ── Bed Monitor Card ──────────────────────────────────────────────────────────
@@ -99,7 +141,7 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({ bed }: { bed:
         <p className="text-[12px] font-bold text-[#b2b2cc] leading-tight truncate mb-1">{bed.bed_label ?? "--"}</p>
         <p className="text-[11px] font-semibold text-[#b2b2cc] truncate">{bed.patient_name ?? "--"}</p>
         <p className="text-[9px] text-[#808099]">
-          {bed.patient_gender ?? "--"} / {bed.patient_age != null ? `${bed.patient_age}세` : "--"}
+          {bed.patient_gender ?? "--"} / {bed.patient_age != null ? `${bed.patient_age} age` : "--"}
         </p>
       </div>
 
@@ -137,7 +179,10 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({ bed }: { bed:
             <span className="text-[10px] font-semibold text-[#4ade80]">ECG</span>
           </div>
           <div className="flex-1 flex items-center px-2">
-            <EcgWaveform samples={bed.ecg?.samples} totalReceived={bed.ecg?.total_received} />
+            <EcgWaveform
+              samples={bed.ecg?.samples}
+              totalReceived={bed.ecg?.total_received}
+              />
           </div>
         </div>
 
