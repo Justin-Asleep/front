@@ -58,6 +58,7 @@ export interface RealtimeBed {
   encounter_id: string | null
   vitals: RealtimeBedVitals | null
   tablet: TabletStatus | null
+  alarm_message: string | null
   ecg?: EcgWaveform | null
 }
 
