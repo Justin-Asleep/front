@@ -36,6 +36,33 @@ function rand(min: number, max: number, dec = 0) {
   return Number((min + Math.random() * (max - min)).toFixed(dec))
 }
 
+// Alarm test values — just past each threshold boundary
+const ALARM_PRESETS: { vital: string; label: string; level: string; color: string; value: number; extra?: number }[] = [
+  // HR (sensor: ecg)
+  { vital: "HR", label: "HR↓", level: "High",     color: "bg-[#f97316]", value: 48 },
+  { vital: "HR", label: "HR↓↓", level: "Critical", color: "bg-[#dc2626]", value: 38 },
+  { vital: "HR", label: "HR↑", level: "High",     color: "bg-[#f97316]", value: 125 },
+  { vital: "HR", label: "HR↑↑", level: "Critical", color: "bg-[#dc2626]", value: 155 },
+  // SPO2 (sensor: spo2)
+  { vital: "SPO2", label: "SpO2↓", level: "High",     color: "bg-[#f97316]", value: 88 },
+  { vital: "SPO2", label: "SpO2↓↓", level: "Critical", color: "bg-[#dc2626]", value: 83 },
+  // RR (sensor: spo2)
+  { vital: "RR", label: "RR↓", level: "High",     color: "bg-[#f97316]", value: 8 },
+  { vital: "RR", label: "RR↓↓", level: "Critical", color: "bg-[#dc2626]", value: 5 },
+  { vital: "RR", label: "RR↑", level: "High",     color: "bg-[#f97316]", value: 27 },
+  { vital: "RR", label: "RR↑↑", level: "Critical", color: "bg-[#dc2626]", value: 37 },
+  // TEMP (sensor: temp)
+  { vital: "TEMP", label: "T↓", level: "High",     color: "bg-[#f97316]", value: 35.3 },
+  { vital: "TEMP", label: "T↓↓", level: "Critical", color: "bg-[#dc2626]", value: 33.5 },
+  { vital: "TEMP", label: "T↑", level: "High",     color: "bg-[#f97316]", value: 38.5 },
+  { vital: "TEMP", label: "T↑↑", level: "Critical", color: "bg-[#dc2626]", value: 40.5 },
+  // BP (sensor: bp)
+  { vital: "BP", label: "BP↓", level: "High",     color: "bg-[#f97316]", value: 88, extra: 58 },
+  { vital: "BP", label: "BP↓↓", level: "Critical", color: "bg-[#dc2626]", value: 68, extra: 38 },
+  { vital: "BP", label: "BP↑", level: "High",     color: "bg-[#f97316]", value: 145, extra: 92 },
+  { vital: "BP", label: "BP↑↑", level: "Critical", color: "bg-[#dc2626]", value: 185, extra: 122 },
+]
+
 async function callIngest(
   method: string, path: string, body: unknown, headers: Record<string, string> = {},
 ): Promise<{ data: unknown; status: number; error: string | null }> {
@@ -160,13 +187,22 @@ function loadSession() {
 }
 
 export function TabletSampleClient() {
-  const saved = useRef(loadSession())
-
-  // Auth
-  const [serial, setSerial] = useState(saved.current?.serial ?? "")
+  // Auth — defer localStorage read to avoid hydration mismatch
+  const [serial, setSerial] = useState("")
   const [secret, setSecret] = useState("")
-  const [deviceToken, setDeviceToken] = useState(saved.current?.deviceToken ?? "")
-  const [loginInfo, setLoginInfo] = useState<{ bed_id: string | null; encounter_id: string | null } | null>(saved.current?.loginInfo ?? null)
+  const [deviceToken, setDeviceToken] = useState("")
+  const [loginInfo, setLoginInfo] = useState<{ bed_id: string | null; encounter_id: string | null } | null>(null)
+  const [hydrated, setHydrated] = useState(false)
+
+  useEffect(() => {
+    const saved = loadSession()
+    if (saved) {
+      setSerial(saved.serial)
+      setDeviceToken(saved.deviceToken)
+      setLoginInfo(saved.loginInfo)
+    }
+    setHydrated(true)
+  }, [])
 
   // Sensors
   const [ecg, setEcg] = useState<SensorState>({ connected: false, battery_level: 80, signal_quality: 90 })
@@ -176,6 +212,15 @@ export function TabletSampleClient() {
 
   // Tablet
   const [tabletBattery, setTabletBattery] = useState(90)
+
+  // Manual vitals override
+  const [manualMode, setManualMode] = useState(false)
+  const [manualHr, setManualHr] = useState(75)
+  const [manualSpo2, setManualSpo2] = useState(98)
+  const [manualRr, setManualRr] = useState(16)
+  const [manualTemp, setManualTemp] = useState(36.5)
+  const [manualBpSys, setManualBpSys] = useState(120)
+  const [manualBpDia, setManualBpDia] = useState(70)
 
   // Auto-send
   const [autoHeartbeat, setAutoHeartbeat] = useState(false)
@@ -233,17 +278,13 @@ export function TabletSampleClient() {
     const now = new Date().toISOString()
     const observations: { type: string; value: number; extra_value: number | null; measured_at: string }[] = []
 
-    // ECG 센서 연결 시 HR 전송
-    if (ecg.connected) observations.push({ type: "HR", value: rand(60, 100), extra_value: null, measured_at: now })
-    // SPO2 센서 연결 시 SPO2 + RR 전송
+    if (ecg.connected) observations.push({ type: "HR", value: manualMode ? manualHr : rand(60, 100), extra_value: null, measured_at: now })
     if (spo2.connected) {
-      observations.push({ type: "SPO2", value: rand(94, 100), extra_value: null, measured_at: now })
-      observations.push({ type: "RR", value: rand(12, 22), extra_value: null, measured_at: now })
+      observations.push({ type: "SPO2", value: manualMode ? manualSpo2 : rand(94, 100), extra_value: null, measured_at: now })
+      observations.push({ type: "RR", value: manualMode ? manualRr : rand(12, 22), extra_value: null, measured_at: now })
     }
-    // TEMP 센서 연결 시 TEMP 전송
-    if (temp.connected) observations.push({ type: "TEMP", value: rand(36.0, 38.0, 1), extra_value: null, measured_at: now })
-    // BP 센서 연결 시 BP 전송
-    if (bp.connected) observations.push({ type: "BP", value: rand(110, 140), extra_value: rand(60, 80), measured_at: now })
+    if (temp.connected) observations.push({ type: "TEMP", value: manualMode ? manualTemp : rand(36.0, 38.0, 1), extra_value: null, measured_at: now })
+    if (bp.connected) observations.push({ type: "BP", value: manualMode ? manualBpSys : rand(110, 140), extra_value: manualMode ? manualBpDia : rand(60, 80), measured_at: now })
 
     if (observations.length === 0) {
       addLog("Observation", "POST", "/ingest/v1/observations", {}, null, null, "No sensors connected")
@@ -253,7 +294,7 @@ export function TabletSampleClient() {
     const body = { observations }
     const { data, status, error } = await callIngest("POST", "/ingest/v1/observations", body, { "X-Device-Token": deviceToken })
     addLog("Observation", "POST", "/ingest/v1/observations", body, data, status, error)
-  }, [deviceToken, ecg.connected, spo2.connected, temp.connected, bp.connected, addLog])
+  }, [deviceToken, ecg.connected, spo2.connected, temp.connected, bp.connected, manualMode, manualHr, manualSpo2, manualRr, manualTemp, manualBpSys, manualBpDia, addLog])
 
   const sendEcg = useCallback(async () => {
     if (!deviceToken || !ecg.connected) return
@@ -261,6 +302,21 @@ export function TabletSampleClient() {
     const { data, status, error } = await callIngest("POST", "/ingest/v1/ecg", body, { "X-Device-Token": deviceToken })
     addLog("ECG", "POST", "/ingest/v1/ecg", body, data, status, error)
   }, [deviceToken, ecg.connected, addLog])
+
+  const sendAlarmTest = useCallback(async (preset: typeof ALARM_PRESETS[number]) => {
+    if (!deviceToken) return
+    const now = new Date().toISOString()
+    const body = {
+      observations: [{
+        type: preset.vital,
+        value: preset.value,
+        extra_value: preset.extra ?? null,
+        measured_at: now,
+      }],
+    }
+    const { data, status, error } = await callIngest("POST", "/ingest/v1/observations", body, { "X-Device-Token": deviceToken })
+    addLog(`Alarm ${preset.label}`, "POST", "/ingest/v1/observations", body, data, status, error)
+  }, [deviceToken, addLog])
 
   // ── Auto timers ──
 
@@ -289,6 +345,14 @@ export function TabletSampleClient() {
   }, [autoEcg, isLoggedIn, ecg.connected, sendEcg])
 
   // ── Render ──
+
+  if (!hydrated) {
+    return (
+      <div className="min-h-screen bg-[#050510] text-white flex items-center justify-center">
+        <p className="text-[#808099]">Loading...</p>
+      </div>
+    )
+  }
 
   if (!isLoggedIn) {
     return (
@@ -360,6 +424,71 @@ export function TabletSampleClient() {
               onBatteryChange={v => setBp(s => ({ ...s, battery_level: v }))}
               onSignalChange={v => setBp(s => ({ ...s, signal_quality: v }))}
             />
+          </div>
+
+          {/* Vitals Mode */}
+          <div className="flex items-center justify-between pt-2">
+            <h2 className="text-sm font-semibold text-[#808099] uppercase tracking-wider">Vitals Values</h2>
+            <Button
+              size="sm" variant="outline"
+              onClick={() => setManualMode(!manualMode)}
+              className={cn(
+                "h-7 text-xs gap-1",
+                manualMode ? "border-[#f59e0b] text-[#f59e0b] hover:bg-[#f59e0b]/10" : "border-[#22c55e] text-[#22c55e] hover:bg-[#22c55e]/10",
+              )}
+            >
+              {manualMode ? "Manual" : "Auto (Normal)"}
+            </Button>
+          </div>
+          {manualMode && (
+            <div className="grid grid-cols-6 gap-2">
+              {[
+                { label: "HR", value: manualHr, onChange: setManualHr, unit: "bpm", min: 20, max: 250 },
+                { label: "SpO2", value: manualSpo2, onChange: setManualSpo2, unit: "%", min: 50, max: 100 },
+                { label: "RR", value: manualRr, onChange: setManualRr, unit: "/min", min: 4, max: 60 },
+                { label: "Temp", value: manualTemp, onChange: setManualTemp, unit: "°C", min: 34, max: 42, step: 0.1 },
+                { label: "BP sys", value: manualBpSys, onChange: setManualBpSys, unit: "mmHg", min: 60, max: 250 },
+                { label: "BP dia", value: manualBpDia, onChange: setManualBpDia, unit: "mmHg", min: 30, max: 150 },
+              ].map(({ label, value, onChange, unit, min, max, step }) => (
+                <div key={label} className="rounded-lg bg-[#0a0b1a] border border-[#1e1f35] p-2.5">
+                  <label className="text-[10px] text-[#808099]">{label} <span className="text-[#555]">{unit}</span></label>
+                  <Input
+                    type="number" min={min} max={max} step={step ?? 1}
+                    value={value}
+                    onChange={e => onChange(Number(e.target.value))}
+                    className="h-7 bg-[#111] border-[#333] text-white text-xs mt-1"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Alarm Test Buttons */}
+          <h2 className="text-sm font-semibold text-[#808099] uppercase tracking-wider pt-2">Alarm Test</h2>
+          <div className="grid grid-cols-2 gap-2">
+            {(["HR", "SPO2", "RR", "TEMP", "BP"] as const).map(vital => {
+              const presets = ALARM_PRESETS.filter(p => p.vital === vital)
+              return (
+                <div key={vital} className="rounded-lg bg-[#0a0b1a] border border-[#1e1f35] p-2.5">
+                  <span className="text-[10px] font-semibold text-[#808099]">{vital}</span>
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {presets.map(p => (
+                      <button
+                        key={p.label}
+                        onClick={() => sendAlarmTest(p)}
+                        className={cn(
+                          "px-2 py-0.5 rounded text-[9px] font-bold text-white transition-opacity hover:opacity-80 cursor-pointer",
+                          p.color,
+                        )}
+                        title={`${p.vital} = ${p.value}${p.extra != null ? `/${p.extra}` : ""} (${p.level})`}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
           </div>
 
           {/* Actions */}
