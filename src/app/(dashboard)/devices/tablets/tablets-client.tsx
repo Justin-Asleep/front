@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Search, Pencil, Trash2 } from "lucide-react"
+import { Search, Pencil, Trash2, Plus, RefreshCw, Tablet, X, Wifi, WifiOff } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { PaginationBar } from "@/components/ui/pagination-bar"
 import dynamic from "next/dynamic"
@@ -222,40 +222,74 @@ export function TabletsClient() {
           <h1 className="text-2xl font-bold tracking-tight text-[#111827]">Tablet Management</h1>
           <p className="text-sm text-[#4b5563]">Register and manage tablet devices</p>
         </div>
-        <Button
-          onClick={openRegister}
-          className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white"
-        >
-          + Register Tablet
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => fetchTablets(currentPage)}
+            disabled={loading}
+            className="size-9 border-[#d1d5db] text-[#6b7280] hover:text-[#111827] cursor-pointer"
+            title="Refresh list"
+          >
+            <RefreshCw className={cn("size-4", loading && "animate-spin")} />
+          </Button>
+          <Button
+            onClick={openRegister}
+            className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white gap-1.5 cursor-pointer"
+          >
+            <Plus className="size-4" />
+            Register Tablet
+          </Button>
+        </div>
       </div>
 
       {/* Search + Filters */}
       <div className="flex items-center gap-4">
         <div className="relative">
-          <Search className="absolute left-2.5 top-2 size-4 text-[#9ca3af] pointer-events-none" />
+          <Search className="absolute left-2.5 top-2.5 size-4 text-[#9ca3af] pointer-events-none" />
           <Input
             placeholder="Search serial or bed..."
-            className="pl-8 w-[300px] h-9 border-[#d1d5db]"
+            className="pl-8 pr-8 w-[300px] h-9 border-[#d1d5db]"
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
           />
+          {search && (
+            <button
+              onClick={() => handleSearchChange("")}
+              className="absolute right-2.5 top-2.5 text-[#9ca3af] hover:text-[#6b7280] cursor-pointer"
+              title="Clear search"
+            >
+              <X className="size-4" />
+            </button>
+          )}
         </div>
         <div className="flex gap-2">
-          {STATUS_FILTERS.map((status) => (
-            <button
-              key={status}
-              onClick={() => handleStatusChange(status)}
-              className={cn(
-                "px-3 py-1 rounded-full text-xs font-medium transition-colors",
-                selectedStatus === status
-                  ? "bg-[#2563eb] text-white"
-                  : "bg-white border border-[#d1d5db] text-[#4b5563] hover:bg-[#f9fafb]"
-              )}
-            >
-              {status}
-            </button>
-          ))}
+          {STATUS_FILTERS.map((status) => {
+            const count =
+              status === "All" ? tablets.length
+              : status === "Active" ? tablets.filter((t) => t.is_active).length
+              : tablets.filter((t) => !t.is_active).length
+            return (
+              <button
+                key={status}
+                onClick={() => handleStatusChange(status)}
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer",
+                  selectedStatus === status
+                    ? "bg-[#2563eb] text-white"
+                    : "bg-white border border-[#d1d5db] text-[#4b5563] hover:bg-[#f9fafb]"
+                )}
+              >
+                {status}
+                <span className={cn(
+                  "ml-1.5 text-[10px]",
+                  selectedStatus === status ? "text-white/70" : "text-[#9ca3af]"
+                )}>
+                  {count}
+                </span>
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -265,24 +299,67 @@ export function TabletsClient() {
           <Table>
             <TableHeader>
               <TableRow className="bg-[#f9fafb] hover:bg-[#f9fafb] border-b border-[#e5e7eb]">
-                <TableHead className="px-6 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Serial</TableHead>
-                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Bed</TableHead>
-                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Ward / Room</TableHead>
-                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Status</TableHead>
-                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Actions</TableHead>
+                <TableHead className="px-6 py-3 text-xs font-semibold text-[#6b7280] uppercase tracking-wider">Serial</TableHead>
+                <TableHead className="px-4 py-3 text-xs font-semibold text-[#6b7280] uppercase tracking-wider">Bed</TableHead>
+                <TableHead className="px-4 py-3 text-xs font-semibold text-[#6b7280] uppercase tracking-wider">Ward / Room</TableHead>
+                <TableHead className="px-4 py-3 text-xs font-semibold text-[#6b7280] uppercase tracking-wider">Status</TableHead>
+                <TableHead className="px-4 py-3 text-xs font-semibold text-[#6b7280] uppercase tracking-wider">Connection</TableHead>
+                <TableHead className="px-4 py-3 text-xs font-semibold text-[#6b7280] uppercase tracking-wider">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="px-4 py-12 text-center text-[#9ca3af]">
-                    Loading...
-                  </TableCell>
-                </TableRow>
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i} className="border-b border-[#e5e7eb]">
+                    <TableCell className="px-6 py-3">
+                      <div className="h-4 w-28 bg-[#e5e7eb] rounded animate-pulse" />
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      <div className="h-4 w-16 bg-[#e5e7eb] rounded animate-pulse" />
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      <div className="h-4 w-32 bg-[#e5e7eb] rounded animate-pulse" />
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      <div className="h-5 w-16 bg-[#e5e7eb] rounded-full animate-pulse" />
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      <div className="h-4 w-14 bg-[#e5e7eb] rounded animate-pulse" />
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        <div className="size-8 bg-[#e5e7eb] rounded animate-pulse" />
+                        <div className="size-8 bg-[#e5e7eb] rounded animate-pulse" />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="px-4 py-12 text-center text-[#9ca3af]">
-                    No tablets found
+                  <TableCell colSpan={6} className="px-4 py-16 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="size-12 rounded-full bg-[#f3f4f6] flex items-center justify-center">
+                        <Tablet className="size-6 text-[#9ca3af]" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-[#6b7280]">No tablets found</p>
+                        <p className="text-xs text-[#9ca3af] mt-1">
+                          {search || selectedStatus !== "All"
+                            ? "Try adjusting your search or filters"
+                            : "Register a new tablet to get started"}
+                        </p>
+                      </div>
+                      {!search && selectedStatus === "All" && (
+                        <Button
+                          onClick={openRegister}
+                          variant="outline"
+                          className="mt-1 text-[#2563eb] border-[#2563eb] hover:bg-[#eff6ff] text-xs h-8 cursor-pointer"
+                        >
+                          <Plus className="size-3.5 mr-1" />
+                          Register Tablet
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -295,20 +372,13 @@ export function TabletsClient() {
                     <TableRow
                       key={tablet.id}
                       className={cn(
-                        "border-b border-[#e5e7eb]",
-                        idx % 2 === 1 ? "bg-[#fcfcfe]" : "bg-white"
+                        "border-b border-[#e5e7eb] transition-colors",
+                        idx % 2 === 1 ? "bg-[#fcfcfe]" : "bg-white",
+                        "hover:bg-[#f0f4ff]"
                       )}
                     >
                       <TableCell className="px-6 py-3">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={cn(
-                              "w-2 h-2 rounded-full flex-shrink-0",
-                              tablet.is_online ? "bg-[#16a34a]" : "bg-[#9ca3af]"
-                            )}
-                          />
-                          <span className="font-medium text-[#111827]">{tablet.serial_number}</span>
-                        </div>
+                        <span className="font-medium text-[#111827]">{tablet.serial_number}</span>
                       </TableCell>
                       <TableCell className="px-4 py-3 text-[#111827] text-[13px]">
                         {tablet.bed_label ?? "-"}
@@ -318,20 +388,35 @@ export function TabletsClient() {
                         <Badge className={statusBadgeClass[statusLabel]}>{statusLabel}</Badge>
                       </TableCell>
                       <TableCell className="px-4 py-3">
+                        {tablet.is_online ? (
+                          <div className="flex items-center gap-1.5">
+                            <Wifi className="size-3.5 text-[#16a34a]" />
+                            <span className="text-[12px] font-medium text-[#16a34a]">Online</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <WifiOff className="size-3.5 text-[#9ca3af]" />
+                            <span className="text-[12px] font-medium text-[#9ca3af]">Offline</span>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="px-4 py-3">
                         <div className="flex items-center gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="size-8 text-[#2563eb] hover:text-[#1d4ed8]"
+                            className="size-9 text-[#2563eb] hover:text-[#1d4ed8] hover:bg-[#eff6ff] cursor-pointer"
                             onClick={() => openEdit(tablet)}
+                            title="Edit tablet"
                           >
                             <Pencil className="size-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="size-8 text-[#dc2626] hover:text-[#b91c1c]"
+                            className="size-9 text-[#dc2626] hover:text-[#b91c1c] hover:bg-[#fef2f2] cursor-pointer"
                             onClick={() => openDelete(tablet)}
+                            title="Deactivate tablet"
                           >
                             <Trash2 className="size-4" />
                           </Button>
