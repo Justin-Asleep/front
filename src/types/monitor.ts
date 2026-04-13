@@ -46,6 +46,12 @@ export interface EcgWaveform {
   total_received: number  // 누적 수신 샘플 수 (sliding window 크기와 무관, 계속 증가)
 }
 
+export interface ActiveAlarm {
+  severity: string
+  value: number
+  message: string
+}
+
 export interface RealtimeBed {
   position: number
   bed_id: string | null
@@ -59,6 +65,7 @@ export interface RealtimeBed {
   vitals: RealtimeBedVitals | null
   tablet: TabletStatus | null
   alarm_message: string | null
+  active_alarms: Record<string, ActiveAlarm>
   ecg?: EcgWaveform | null
 }
 

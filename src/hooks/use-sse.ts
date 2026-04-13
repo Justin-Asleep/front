@@ -48,6 +48,7 @@ export interface AlarmResolvedSSEMessage {
   event: "alarm_resolved"
   bed_id: string
   encounter_id: string
+  param: string
 }
 
 export type AlarmSSEMessage = AlarmTriggeredSSEMessage | AlarmResolvedSSEMessage

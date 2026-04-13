@@ -2,7 +2,8 @@
 
 import React from "react"
 import { cn } from "@/lib/utils"
-import type { RealtimeBed } from "@/types/monitor"
+import { AlertTriangle } from "lucide-react"
+import type { ActiveAlarm, RealtimeBed } from "@/types/monitor"
 import { EcgWaveform } from "@/components/monitoring/ecg-waveform"
 
 // ── Animated value ────────────────────────────────────────────────────────────
@@ -12,6 +13,35 @@ function AnimatedValue({ value, className }: { value: string | number, className
     <span key={String(value)} className={cn(className, "inline-block animate-vital-flash")}>
       {value}
     </span>
+  )
+}
+
+// ── Alarm severity helpers ───────────────────────────────────────────────────
+const SEVERITY_ORDER: Record<string, number> = { CRITICAL: 3, HIGH: 2, MEDIUM: 1, LOW: 0 }
+const SEVERITY_BORDER: Record<string, string> = {
+  CRITICAL: "border-[#dc2626]",
+  HIGH: "border-[#f97316]",
+  MEDIUM: "border-[#eab308]",
+  LOW: "border-[#2a2b45]",
+}
+const SEVERITY_BANNER_BG: Record<string, string> = {
+  CRITICAL: "bg-[#dc2626]",
+  HIGH: "bg-[#f97316]",
+  MEDIUM: "bg-[#eab308]",
+  LOW: "bg-[#2a2b45]",
+}
+const SEVERITY_BANNER_TEXT: Record<string, string> = {
+  CRITICAL: "text-white",
+  HIGH: "text-white",
+  MEDIUM: "text-[#0a0b1a]",
+  LOW: "text-[#808099]",
+}
+
+function getHighestAlarm(alarms: Record<string, ActiveAlarm>): { severity: string; message: string } | null {
+  const entries = Object.values(alarms)
+  if (entries.length === 0) return null
+  return entries.reduce((worst, a) =>
+    (SEVERITY_ORDER[a.severity] ?? 0) > (SEVERITY_ORDER[worst.severity] ?? 0) ? a : worst,
   )
 }
 
@@ -45,9 +75,29 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({ bed }: { bed:
 
   const v = bed.vitals
   const t = bed.tablet
+  const alarm = getHighestAlarm(bed.active_alarms ?? {})
+  const alarmSeverity = alarm?.severity ?? ""
+  const isCritical = alarmSeverity === "CRITICAL"
 
   return (
-    <div className="rounded-lg shadow-[0px_4px_12px_0px_rgba(0,0,0,0.3)] bg-[#0a0b1a] overflow-hidden flex min-h-[180px]">
+    <div className={cn(
+      "rounded-lg shadow-[0px_4px_12px_0px_rgba(0,0,0,0.3)] bg-[#0a0b1a] overflow-hidden flex flex-col min-h-[180px] border",
+      alarm ? SEVERITY_BORDER[alarmSeverity] ?? "border-[#2a2b45]" : "border-[#2a2b45]",
+      isCritical && "animate-critical-pulse",
+    )}>
+      {/* Alarm banner */}
+      {alarm && (
+        <div className={cn(
+          "flex items-center gap-1.5 px-2.5 py-1",
+          SEVERITY_BANNER_BG[alarmSeverity],
+          SEVERITY_BANNER_TEXT[alarmSeverity],
+        )}>
+          <AlertTriangle className="size-3 shrink-0" />
+          <span className="text-[10px] font-bold truncate">{alarm.message}</span>
+        </div>
+      )}
+
+      <div className="flex flex-1 min-h-0">
       {/* ── Left 1: Patient Info ── */}
       <div className="flex flex-col w-[100px] shrink-0 border-r border-[#1e1f35] p-2.5">
         <p className="text-[10px] text-[#808099] truncate">{bed.ward_name ?? "--"}</p>
@@ -186,6 +236,7 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({ bed }: { bed:
             </div>
           ))}
         </div>
+      </div>
       </div>
     </div>
   )

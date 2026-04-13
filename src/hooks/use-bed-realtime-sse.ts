@@ -6,7 +6,7 @@ import {
   type HeartbeatSSEMessage,
   type SensorStatusPayload,
 } from "@/hooks/use-sse"
-import type { RealtimeBed, SensorStatus, TabletStatus } from "@/types/monitor"
+import type { ActiveAlarm, RealtimeBed, SensorStatus, TabletStatus } from "@/types/monitor"
 
 // 12초 rolling window = 화면 6초 + SSE 버스트/rAF 드롭 대비 6초 헤드룸.
 // 헤드룸이 없으면 displayed가 received보다 뒤처지는 순간 샘플이 evict되어 sweep에 갭 발생.
@@ -46,6 +46,16 @@ function mergeTabletFromHeartbeat(
   }
 }
 
+const SEVERITY_ORDER: Record<string, number> = { CRITICAL: 3, HIGH: 2, MEDIUM: 1, LOW: 0 }
+
+function highestAlarmMessage(alarms: Record<string, ActiveAlarm>): string | null {
+  const entries = Object.values(alarms)
+  if (entries.length === 0) return null
+  return entries.reduce((worst, a) =>
+    (SEVERITY_ORDER[a.severity] ?? 0) > (SEVERITY_ORDER[worst.severity] ?? 0) ? a : worst,
+  ).message
+}
+
 function clearBedOnDischarge(bed: RealtimeBed): RealtimeBed {
   return {
     ...bed,
@@ -56,6 +66,7 @@ function clearBedOnDischarge(bed: RealtimeBed): RealtimeBed {
     vitals: null,
     ecg: null,
     alarm_message: null,
+    active_alarms: {},
   }
 }
 
@@ -101,11 +112,17 @@ export function useBedRealtimeSSE<T extends { beds: RealtimeBed[] }>(path: strin
           ...prev,
           beds: prev.beds.map((bed) => {
             if (!bed.bed_id || update.bed_id !== bed.bed_id) return bed
+            const alarms = { ...(bed.active_alarms ?? {}) }
             if (update.event === "alarm_triggered") {
-              return { ...bed, alarm_message: update.message }
+              alarms[update.param] = {
+                severity: update.severity,
+                value: update.value,
+                message: update.message,
+              }
+            } else {
+              delete alarms[update.param]
             }
-            // alarm_resolved — snapshot에서 alarm_map은 unresolved만 담기 때문에 동일하게 clear
-            return { ...bed, alarm_message: null }
+            return { ...bed, active_alarms: alarms, alarm_message: highestAlarmMessage(alarms) }
           }),
         } as T
       })
