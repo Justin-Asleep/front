@@ -1,0 +1,16 @@
+{
+  "id": "/tablet",
+  "name": "A-Vital Tablet",
+  "short_name": "A-Vital Bed",
+  "description": "Bedside tablet — vital-sign publisher",
+  "start_url": "/tablet",
+  "scope": "/tablet",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#050510",
+  "theme_color": "#0a0b1a",
+  "icons": [
+    { "src": "/icon-tablet-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-tablet-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

@@ -1,12 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { DashboardShell } from "@/components/layout/dashboard-shell";
 
 export const metadata: Metadata = {
   manifest: "/dashboard.webmanifest",
   appleWebApp: {
     capable: true,
     title: "A-Vital Monitoring",
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
   },
 };
 
@@ -16,6 +15,6 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return <DashboardShell>{children}</DashboardShell>;
+export default function MonitorLayout({ children }: { children: React.ReactNode }) {
+  return <>{children}</>;
 }
