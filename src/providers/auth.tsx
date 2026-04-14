@@ -27,7 +27,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (window.location.pathname === "/login") {
+    const path = window.location.pathname;
+    // /login: no auth check. /tablet: device_token based, not user cookie.
+    if (path === "/login" || path === "/tablet" || path.startsWith("/tablet/")) {
       setIsLoading(false);
       return;
     }
