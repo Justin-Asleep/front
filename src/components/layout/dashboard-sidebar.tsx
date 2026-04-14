@@ -5,13 +5,13 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { sidebarMenus, getActiveTabId } from "@/config/navigation";
 
-export function DashboardSidebar() {
+export function DashboardSidebar({ onItemClick }: { onItemClick?: () => void } = {}) {
   const pathname = usePathname();
   const activeTabId = getActiveTabId(pathname);
   const menuItems = sidebarMenus[activeTabId] ?? [];
 
   return (
-    <aside className="w-60 bg-white border-r border-gray-200 shrink-0 overflow-y-auto">
+    <aside className="w-60 h-full bg-white border-r border-gray-200 shrink-0 overflow-y-auto">
       <div className="pt-5 pb-4">
         <p className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider mb-3 px-5">
           {activeTabId === "central-monitor" ? "Central Monitor" : activeTabId.replace(/-/g, " ")}&nbsp;settings
@@ -23,6 +23,7 @@ export function DashboardSidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={onItemClick}
                 className={cn(
                   "flex items-center h-11 text-sm transition-colors",
                   isActive
