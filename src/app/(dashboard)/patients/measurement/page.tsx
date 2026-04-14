@@ -1,5 +1,10 @@
+import { Suspense } from "react"
 import { MeasurementClient } from "./measurement-client"
 
 export default function MeasurementPage() {
-  return <MeasurementClient />
+  return (
+    <Suspense>
+      <MeasurementClient />
+    </Suspense>
+  )
 }

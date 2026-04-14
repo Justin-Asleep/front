@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  namespace: vital-monitoring
+data:
+  # Server-side only (Route Handlers / BFF) — stays in-cluster, skips ALB.
+  API_URL: "http://api-server.vital-monitoring.svc.cluster.local:8000"
+  NODE_ENV: "production"

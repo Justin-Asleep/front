@@ -1,5 +1,10 @@
+import { Suspense } from "react"
 import { PatientMonitorClient } from "./patient-monitor-client"
 
 export default function PatientMonitorPage() {
-  return <PatientMonitorClient />
+  return (
+    <Suspense>
+      <PatientMonitorClient />
+    </Suspense>
+  )
 }

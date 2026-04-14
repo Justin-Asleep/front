@@ -26,5 +26,10 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon\\.ico|api|health).*)',],
+  // Skip auth guard for: Next internals, API routes, health probe,
+  // and any static asset identifiable by file extension (manifests,
+  // service worker, icons, fonts, etc.) served from /public.
+  matcher: [
+    '/((?!_next/static|_next/image|api|health|favicon\\.ico|.*\\.(?:webmanifest|png|jpg|jpeg|gif|webp|svg|ico|js|css|json|map|woff|woff2|ttf|eot|txt|xml)).*)',
+  ],
 }

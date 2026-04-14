@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.idea
+.claude
+.omc
+.DS_Store
+.env*
+!.env.example
+Dockerfile
+.dockerignore
+README.md
+AGENTS.md
+CLAUDE.md
+docs
+tsconfig.tsbuildinfo
+coverage
