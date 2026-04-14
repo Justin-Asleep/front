@@ -3,6 +3,7 @@ import { Inter, Noto_Sans_KR } from "next/font/google";
 import { AuthProvider } from "@/providers/auth";
 import { Toaster } from "@/components/ui/toaster";
 import { ConfirmProvider } from "@/components/ui/confirm";
+import { PwaRegister } from "@/components/pwa-register";
 import "./globals.css";
 
 const inter = Inter({
@@ -37,6 +38,7 @@ export default function RootLayout({
             <Toaster />
           </ConfirmProvider>
         </AuthProvider>
+        <PwaRegister />
       </body>
     </html>
   );
