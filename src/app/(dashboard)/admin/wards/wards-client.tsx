@@ -26,6 +26,8 @@ interface WardDTO {
   name: string
   floor: number | null
   is_active: boolean
+  room_count: number
+  bed_count: number
 }
 
 interface PaginatedData<T> {
@@ -136,6 +138,8 @@ export function WardsClient() {
               <TableRow className="bg-[#f9fafb] hover:bg-[#f9fafb] border-b border-[#e5e7eb]">
                 <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">Ward Name</TableHead>
                 <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">Floor</TableHead>
+                <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">Rooms</TableHead>
+                <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">Beds</TableHead>
                 <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">Status</TableHead>
                 <TableHead className="px-6 py-3 text-[12px] font-semibold text-[#9ca3af]">Actions</TableHead>
               </TableRow>
@@ -143,7 +147,7 @@ export function WardsClient() {
             <TableBody>
               {wards.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="px-6 py-8 text-center text-[#9ca3af]">
+                  <TableCell colSpan={6} className="px-6 py-8 text-center text-[#9ca3af]">
                     No wards found. Click &quot;+ Add Ward&quot; to create one.
                   </TableCell>
                 </TableRow>
@@ -160,6 +164,8 @@ export function WardsClient() {
                     <TableCell className="px-6 py-3 text-[#4b5563]">
                       {ward.floor ? `${ward.floor}F` : "—"}
                     </TableCell>
+                    <TableCell className="px-6 py-3 text-[#4b5563] tabular-nums">{ward.room_count}</TableCell>
+                    <TableCell className="px-6 py-3 text-[#4b5563] tabular-nums">{ward.bed_count}</TableCell>
                     <TableCell className="px-6 py-3">
                       <Badge className={ward.is_active
                         ? "bg-[#dcfce7] text-[#16a34a] border-0"

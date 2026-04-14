@@ -12,7 +12,7 @@ export interface EcgRenderState {
   setDisplayedCount: (v: number) => void
 }
 
-const DISPLAY_SAMPLES = 1500
+export const DISPLAY_SAMPLES = 1500
 const GAP_SAMPLES = 30
 const SAMPLES_PER_SEC = 250
 
@@ -24,6 +24,19 @@ const ECG_RANGE = ECG_MAX - ECG_MIN
 const registered = new Set<EcgRenderState>()
 let rafId = 0
 let lastTime = 0
+
+// 탭이 백그라운드에서 visible로 복귀하면 모든 ECG 캔버스를 리셋해 처음부터 sweep 재시작.
+// rAF throttle로 누적된 delta가 한 프레임에 점프하지 않도록 lastTime도 갱신.
+if (typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible") return
+    registered.forEach((s) => {
+      s.setDisplayedCount(0)
+      if (s.width > 0 && s.height > 0) s.ctx.clearRect(0, 0, s.width, s.height)
+    })
+    lastTime = performance.now()
+  })
+}
 
 function loop() {
   const now = performance.now()

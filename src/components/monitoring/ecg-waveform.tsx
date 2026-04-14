@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
-import { type EcgRenderState, registerEcgCanvas, unregisterEcgCanvas } from "@/lib/ecg-render-loop"
+import { DISPLAY_SAMPLES, type EcgRenderState, registerEcgCanvas, unregisterEcgCanvas } from "@/lib/ecg-render-loop"
 
 // ECG 수신이 이 시간 이상 끊기면 stale로 간주하고 placeholder overlay로 전환
 const STALE_THRESHOLD_MS = 3000
@@ -37,11 +37,13 @@ export function EcgWaveform({
     // (2) lag < 0 — SSE 재연결 시 서버 카운터가 backward (세션 재시작 등)
     // (3) lag > samples.length — displayed가 rolling window 밖에 존재
     //     (장기 disconnect 동안 서버는 계속 진행, 재연결 후 displayed가 evicted 샘플 참조)
-    // 재초기화 값 = rolling window의 가장 오래된 샘플 위치. displayed === target을
-    // 바로 만들면 rAF catch-up이 동작 안 해 sweep이 freeze 되므로 뒤로 당김.
+    // Pullback = min(DISPLAY_SAMPLES, samples.length): 화면 1폭(1500)만큼만 뒤로 당겨
+    // 재진입 시 full buffer가 즉시 렌더되도록 함. 신규 세션(samples.length < 1500)에서는
+    // pullback = samples.length로 폴백되어 기존 sweep-in 애니메이션 유지.
     const lag = total - displayedCountRef.current
     if (displayedCountRef.current === 0 || lag < 0 || lag > samples.length) {
-      displayedCountRef.current = Math.max(0, total - samples.length)
+      const pullback = Math.min(DISPLAY_SAMPLES, samples.length)
+      displayedCountRef.current = Math.max(0, total - pullback)
     }
     targetCountRef.current = total
     lastUpdateAtRef.current = Date.now()

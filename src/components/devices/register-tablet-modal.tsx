@@ -110,14 +110,16 @@ export function RegisterTabletModal({ open, onOpenChange, beds, onRegister }: Pr
               <div className="flex justify-center py-2">
                 <div className="bg-white p-3 rounded-lg border border-[#e5e7eb]">
                   <QRCodeSVG
-                    value={`${result.serial_number}:${result.device_secret}`}
+                    value={typeof window !== "undefined"
+                      ? `${window.location.origin}/tablet?serial=${encodeURIComponent(result.serial_number)}&secret=${encodeURIComponent(result.device_secret)}`
+                      : ""}
                     size={160}
                     level="M"
                   />
                 </div>
               </div>
               <p className="text-center text-[11px] text-[#9ca3af]">
-                Scan to register device token
+                Scan to open tablet & auto-login
               </p>
 
               <div className="flex items-start gap-2 bg-[#fffbeb] rounded-lg px-3 py-2.5">

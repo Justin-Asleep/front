@@ -15,7 +15,6 @@ export type Tab = {
 export const tabs: Tab[] = [
   { id: "patients", label: "Patients", href: "/patients/list" },
   { id: "devices", label: "Devices", href: "/devices/tablets" },
-  { id: "monitoring", label: "Monitoring", href: "/monitoring/realtime-station" },
   { id: "central-monitor", label: "Central Monitor", href: "/central-monitor/stations" },
   { id: "admin", label: "Admin Settings", href: "/admin/bed-status", roles: ["SUPER_ADMIN", "ADMIN"] },
 ];

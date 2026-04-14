@@ -118,14 +118,16 @@ export function EditTabletModal({ open, onOpenChange, tablet, beds, onSave }: Pr
             <div className="flex justify-center py-2">
               <div className="bg-white p-3 rounded-lg border border-[#e5e7eb]">
                 <QRCodeSVG
-                  value={`${tablet?.serial_number}:${newSecret}`}
+                  value={typeof window !== "undefined" && tablet?.serial_number
+                    ? `${window.location.origin}/tablet?serial=${encodeURIComponent(tablet.serial_number)}&secret=${encodeURIComponent(newSecret)}`
+                    : ""}
                   size={160}
                   level="M"
                 />
               </div>
             </div>
             <p className="text-center text-[11px] text-[#9ca3af]">
-              Scan to register device token
+              Scan to open tablet & auto-login
             </p>
 
             <div className="flex items-start gap-2 bg-[#fffbeb] rounded-lg px-3 py-2.5">

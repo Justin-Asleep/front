@@ -13,7 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Pencil } from "lucide-react"
+import { ExternalLink, Pencil } from "lucide-react"
+import Link from "next/link"
 import { cn } from "@/lib/utils"
 import dynamic from "next/dynamic"
 
@@ -61,7 +62,6 @@ export function StationsClient() {
   const [stations, setStations] = useState<Station[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [copiedId, setCopiedId] = useState<string | null>(null)
   const [editTarget, setEditTarget] = useState<Station | null>(null)
 
   const fetchStations = useCallback(async () => {
@@ -98,12 +98,6 @@ export function StationsClient() {
   useEffect(() => {
     fetchStations()
   }, [fetchStations])
-
-  function handleCopy(id: string, key: string) {
-    navigator.clipboard.writeText(key)
-    setCopiedId(id)
-    setTimeout(() => setCopiedId(null), 2000)
-  }
 
   async function handleEdit(data: { name: string; status: StationStatus }) {
     if (!editTarget) return
@@ -152,7 +146,7 @@ export function StationsClient() {
               <TableRow className="bg-[#f9fafb] hover:bg-[#f9fafb] border-b border-[#e5e7eb]">
                 <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Name</TableHead>
                 <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Ward</TableHead>
-                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">URL Key</TableHead>
+                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">URL</TableHead>
                 <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Status</TableHead>
                 <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Actions</TableHead>
               </TableRow>
@@ -176,15 +170,16 @@ export function StationsClient() {
                     <TableCell className="px-4 py-3 font-medium text-[#111827]">{station.name}</TableCell>
                     <TableCell className="px-4 py-3 text-[#4b5563]">{station.wardName}</TableCell>
                     <TableCell className="px-4 py-3">
-                      <div className="bg-[#f9fafb] rounded-[6px] flex items-center justify-between px-2.5 h-7 w-[220px]">
-                        <span className="font-mono text-xs text-[#374151] truncate max-w-[140px]">{station.urlKey}</span>
-                        <button
-                          onClick={() => handleCopy(station.id, station.urlKey)}
-                          className="text-xs text-[#2563eb] hover:text-[#1d4ed8] font-medium ml-2 shrink-0"
-                        >
-                          {copiedId === station.id ? "Copied!" : "Copy"}
-                        </button>
-                      </div>
+                      <Link
+                        href={`/station/${station.urlKey}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        prefetch={false}
+                        className="bg-[#f9fafb] hover:bg-[#f3f4f6] rounded-[6px] inline-flex items-center gap-2 px-2.5 h-7 max-w-[260px] text-[#2563eb] hover:text-[#1d4ed8]"
+                      >
+                        <span className="font-mono text-xs truncate">station/{station.urlKey}</span>
+                        <ExternalLink className="size-3 shrink-0" />
+                      </Link>
                     </TableCell>
                     <TableCell className="px-4 py-3">
                       <Badge className={statusBadgeClass[station.status]}>{station.status}</Badge>

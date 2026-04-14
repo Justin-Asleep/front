@@ -108,6 +108,9 @@ export type ConfigChangedSSEMessage = MonitorConfigChangedSSEMessage | StationCo
 
 interface UseSSEOptions<T> {
   path: string
+  // Connect only when enabled. Defaults to true for backward compat.
+  // Use to gate connection on auth/resource availability (e.g. tablet needs bed_id).
+  enabled?: boolean
   onSnapshot: (data: T) => void
   onVitals?: (data: VitalsSSEMessage) => void
   onAlarm?: (data: AlarmSSEMessage) => void
@@ -119,6 +122,7 @@ interface UseSSEOptions<T> {
 
 export function useSSE<T>({
   path,
+  enabled = true,
   onSnapshot,
   onVitals,
   onAlarm,
@@ -226,13 +230,22 @@ export function useSSE<T>({
   }, [connect])
 
   useEffect(() => {
+    if (!enabled) {
+      // When disabled mid-session (e.g. logout), tear down any live stream.
+      // Cascading render here is intentional — UI needs `connected: false` to reflect disabled state.
+      if (reconnectTimer.current) { clearTimeout(reconnectTimer.current); reconnectTimer.current = null }
+      if (esRef.current) { esRef.current.close(); esRef.current = null }
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- see above
+      setConnected(false)
+      return
+    }
     connect()
     return () => {
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current)
       if (esRef.current) esRef.current.close()
       esRef.current = null
     }
-  }, [connect])
+  }, [connect, enabled])
 
   return { connected, error, reconnect }
 }

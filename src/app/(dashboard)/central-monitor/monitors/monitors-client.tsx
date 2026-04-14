@@ -13,7 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Pencil, Trash2 } from "lucide-react"
+import { ExternalLink, Pencil, Trash2 } from "lucide-react"
+import Link from "next/link"
 import { cn } from "@/lib/utils"
 import dynamic from "next/dynamic"
 import type { EditMonitorData } from "@/components/central-monitor/edit-monitor-modal"
@@ -85,7 +86,6 @@ export function MonitorsClient() {
   const [monitors, setMonitors] = useState<Monitor[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [copiedId, setCopiedId] = useState<string | null>(null)
   const [addOpen, setAddOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<EditMonitorData | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Monitor | null>(null)
@@ -117,12 +117,6 @@ export function MonitorsClient() {
   useEffect(() => {
     fetchMonitors()
   }, [fetchMonitors])
-
-  function handleCopy(id: string, key: string) {
-    navigator.clipboard.writeText(key)
-    setCopiedId(id)
-    setTimeout(() => setCopiedId(null), 2000)
-  }
 
   async function handleAdd(data: { name: string; layout: string }) {
     try {
@@ -260,7 +254,7 @@ export function MonitorsClient() {
               <TableRow className="bg-[#f9fafb] hover:bg-[#f9fafb] border-b border-[#e5e7eb]">
                 <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Name</TableHead>
                 <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Layout</TableHead>
-                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">URL Key</TableHead>
+                <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">URL</TableHead>
                 <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Status</TableHead>
                 <TableHead className="px-4 py-3 text-xs font-semibold text-[#9ca3af] uppercase tracking-wider">Actions</TableHead>
               </TableRow>
@@ -284,15 +278,16 @@ export function MonitorsClient() {
                     <TableCell className="px-4 py-3 font-medium text-[#111827]">{monitor.name}</TableCell>
                     <TableCell className="px-4 py-3 text-[#4b5563]">{monitor.layout}</TableCell>
                     <TableCell className="px-4 py-3">
-                      <div className="bg-[#f9fafb] rounded-[6px] flex items-center justify-between px-2.5 h-7 w-[240px]">
-                        <span className="font-mono text-xs text-[#374151] truncate max-w-[160px]">{monitor.urlKey}</span>
-                        <button
-                          onClick={() => handleCopy(monitor.id, monitor.urlKey)}
-                          className="text-xs text-[#2563eb] hover:text-[#1d4ed8] font-medium ml-2 shrink-0"
-                        >
-                          {copiedId === monitor.id ? "Copied!" : "Copy"}
-                        </button>
-                      </div>
+                      <Link
+                        href={`/monitor/${monitor.urlKey}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        prefetch={false}
+                        className="bg-[#f9fafb] hover:bg-[#f3f4f6] rounded-[6px] inline-flex items-center gap-2 px-2.5 h-7 max-w-[280px] text-[#2563eb] hover:text-[#1d4ed8]"
+                      >
+                        <span className="font-mono text-xs truncate">monitor/{monitor.urlKey}</span>
+                        <ExternalLink className="size-3 shrink-0" />
+                      </Link>
                     </TableCell>
                     <TableCell className="px-4 py-3">
                       <Badge className={statusBadgeClass[monitor.status]}>{monitor.status}</Badge>

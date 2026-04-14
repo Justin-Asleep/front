@@ -40,9 +40,15 @@ const SEVERITY_BANNER_TEXT: Record<string, string> = {
 function getHighestAlarm(alarms: Record<string, ActiveAlarm>): { severity: string; message: string } | null {
   const entries = Object.values(alarms)
   if (entries.length === 0) return null
-  return entries.reduce((worst, a) =>
-    (SEVERITY_ORDER[a.severity] ?? 0) > (SEVERITY_ORDER[worst.severity] ?? 0) ? a : worst,
+  const topRank = entries.reduce(
+    (max, a) => Math.max(max, SEVERITY_ORDER[a.severity] ?? 0),
+    -1,
   )
+  const top = entries.filter((a) => (SEVERITY_ORDER[a.severity] ?? 0) === topRank)
+  return {
+    severity: top[0].severity,
+    message: top.map((a) => a.message).join(", "),
+  }
 }
 
 // ── Bed Monitor Card ──────────────────────────────────────────────────────────
@@ -99,12 +105,23 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({ bed }: { bed:
 
       <div className="flex flex-1 min-h-0">
       {/* ── Left 1: Patient Info ── */}
-      <div className="flex flex-col w-[100px] shrink-0 border-r border-[#1e1f35] p-2.5">
-        <p className="text-[10px] text-[#808099] truncate">{bed.ward_name ?? "--"}</p>
-        <p className="text-[10px] text-[#808099] truncate">{bed.room_name ?? "--"}</p>
-        <p className="text-[12px] font-bold text-[#b2b2cc] leading-tight truncate mb-1">{bed.bed_label ?? "--"}</p>
-        <p className="text-[11px] font-semibold text-[#b2b2cc] truncate">{bed.patient_name ?? "--"}</p>
-        <p className="text-[9px] text-[#808099]">
+      <div className="flex flex-col w-[100px] shrink-0 border-r border-[#1e1f35] p-2.5 gap-1.5">
+        {/* Row 1: Location */}
+        <div className="flex items-baseline gap-1 min-w-0">
+          <span className="text-[10px] text-[#808099] truncate">{bed.ward_name ?? "--"}</span>
+          <span className="text-[10px] text-[#4a4b66]">·</span>
+          <span className="text-[10px] text-[#808099] truncate">{bed.room_name ?? "--"}</span>
+          <span className="text-[10px] text-[#4a4b66]">·</span>
+          <span className="text-[11px] font-bold text-[#b2b2cc] truncate">{bed.bed_label ?? "--"}</span>
+        </div>
+
+        {/* Row 2: Patient Name */}
+        <p className="text-[13px] font-semibold text-[#e5e5f0] leading-tight truncate">
+          {bed.patient_name ?? "--"}
+        </p>
+
+        {/* Row 3: Gender / Age */}
+        <p className="text-[10px] text-[#808099]">
           {bed.patient_gender ?? "--"} / {bed.patient_age != null ? `${bed.patient_age} age` : "--"}
         </p>
       </div>
@@ -127,10 +144,10 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({ bed }: { bed:
         </div>
         <div className="border-t border-[#1e1f35] px-2.5 py-1.5 text-center">
           <div className="flex items-baseline justify-center gap-0.5">
-            <span className="text-[9px] font-semibold text-white">PVC</span>
+            <span className="text-[9px] font-semibold text-[#555]">PVC</span>
             <span className="text-[7px] text-[#555]">/min</span>
           </div>
-          <p className="text-[18px] font-bold leading-none text-white mt-0.5">
+          <p className="text-[18px] font-bold leading-none text-[#555] mt-0.5">
             {v?.pvc != null ? v.pvc : "--"}
           </p>
         </div>
@@ -198,8 +215,8 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({ bed }: { bed:
       {/* ── Right: EWS + Device Status ── */}
       <div className="flex flex-col w-[80px] shrink-0 border-l border-[#1e1f35]">
         <div className="flex flex-col items-center justify-center border-b border-[#1e1f35] px-2 py-1.5">
-          <span className="text-[9px] font-semibold text-[#fb923c] mb-0.5">EWS</span>
-          <p className="text-[22px] font-bold leading-none text-[#fb923c]">
+          <span className="text-[9px] font-semibold text-[#555] mb-0.5">EWS</span>
+          <p className="text-[22px] font-bold leading-none text-[#555]">
             {v?.ews != null ? v.ews : "--"}
           </p>
         </div>

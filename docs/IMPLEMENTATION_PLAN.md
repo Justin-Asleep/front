@@ -13,7 +13,7 @@
 - lucide-react (아이콘)
 
 ## 프로젝트 위치
-`/Users/justin/Documents/source/vital-monitoring-frontend`
+`/Users/justin/Documents/source/a-vital-monitoring-frontend`
 
 ## 공통 레이아웃 (완성됨)
 - `src/components/layout/header-nav.tsx` — 블루 헤더, 5개 탭
@@ -28,7 +28,7 @@
 ### 세션 1: 관리자 설정 탭 (6페이지)
 ```
 /ret 피그마(https://www.figma.com/design/pBi3ErYU4GagJLF4KtHlRi) 기준으로 관리자 설정 탭 6개 페이지의 실제 UI 컴포넌트를 구현해줘.
-프로젝트: /Users/justin/Documents/source/vital-monitoring-frontend
+프로젝트: /Users/justin/Documents/source/a-vital-monitoring-frontend
 구현 계획서: docs/IMPLEMENTATION_PLAN.md 참조
 
 대상 페이지:
@@ -45,7 +45,7 @@
 ### 세션 2: 환자관리 탭 (3페이지) — 공간 중심 핵심
 ```
 /ret 피그마(https://www.figma.com/design/pBi3ErYU4GagJLF4KtHlRi) 기준으로 환자관리 탭 3개 페이지 UI를 구현해줘.
-프로젝트: /Users/justin/Documents/source/vital-monitoring-frontend
+프로젝트: /Users/justin/Documents/source/a-vital-monitoring-frontend
 구현 계획서: docs/IMPLEMENTATION_PLAN.md 참조
 
 대상 페이지:
@@ -63,7 +63,7 @@
 ### 세션 3: 의료기기 관리 탭 (3페이지)
 ```
 /ret 피그마(https://www.figma.com/design/pBi3ErYU4GagJLF4KtHlRi) 기준으로 의료기기 관리 탭 3개 페이지 UI를 구현해줘.
-프로젝트: /Users/justin/Documents/source/vital-monitoring-frontend
+프로젝트: /Users/justin/Documents/source/a-vital-monitoring-frontend
 구현 계획서: docs/IMPLEMENTATION_PLAN.md 참조
 
 대상 페이지:
@@ -80,7 +80,7 @@
 ### 세션 4: 중앙모니터 설정 탭 (4페이지)
 ```
 /ret 피그마(https://www.figma.com/design/pBi3ErYU4GagJLF4KtHlRi) 기준으로 중앙모니터 설정 탭 4개 페이지 UI를 구현해줘.
-프로젝트: /Users/justin/Documents/source/vital-monitoring-frontend
+프로젝트: /Users/justin/Documents/source/a-vital-monitoring-frontend
 구현 계획서: docs/IMPLEMENTATION_PLAN.md 참조
 
 대상 페이지:
@@ -96,7 +96,7 @@
 ### 세션 5: 모니터링 탭 (4페이지) — 다크 바이탈 + 로그인
 ```
 /ret 피그마(https://www.figma.com/design/pBi3ErYU4GagJLF4KtHlRi) 기준으로 모니터링 탭 4개 페이지 + 로그인 페이지 UI를 구현해줘.
-프로젝트: /Users/justin/Documents/source/vital-monitoring-frontend
+프로젝트: /Users/justin/Documents/source/a-vital-monitoring-frontend
 구현 계획서: docs/IMPLEMENTATION_PLAN.md 참조
 
 대상 페이지:
