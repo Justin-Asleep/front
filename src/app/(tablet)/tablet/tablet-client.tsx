@@ -289,6 +289,8 @@ export function TabletSampleClient() {
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const ecgRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const hrRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  // Latest HR value published — read by sendEcg so waveform BPM stays in sync
+  const currentHrRef = useRef<number>(72)
   const spo2Ref = useRef<ReturnType<typeof setInterval> | null>(null)
   const tempRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const bpRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -392,6 +394,7 @@ export function TabletSampleClient() {
     if (!ecg.connected) return
     const alarm = activeAlarmsRef.current.HR
     const hr = alarm ? alarm.value : (manualMode ? manualHr : rand(65, 95))
+    currentHrRef.current = hr
     setDisplayVitals(v => ({ ...v, hr }))
     await postObservations("HR", [{ type: "HR", value: hr, extra_value: null, measured_at: new Date().toISOString() }])
   }, [ecg.connected, manualMode, manualHr, postObservations])
@@ -429,11 +432,14 @@ export function TabletSampleClient() {
 
   const sendEcg = useCallback(async () => {
     if (!deviceToken || !ecg.connected) return
-    const body = { waveforms: [{ measured_at: new Date().toISOString(), samples: generateEcgSamples(), sample_rate_hz: 250 }] }
+    // Alarm/manual values take effect immediately; random mode falls back to the last HR sendHr wrote
+    const alarm = activeAlarmsRef.current.HR
+    const hr = alarm ? alarm.value : (manualMode ? manualHr : currentHrRef.current)
+    const body = { waveforms: [{ measured_at: new Date().toISOString(), samples: generateEcgSamples(250, hr), sample_rate_hz: 250 }] }
     const { data, status, error } = await callIngest("POST", "/ingest/v1/ecg", body, { "X-Device-Token": deviceToken })
     addLog("ECG", "POST", "/ingest/v1/ecg", body, data, status, error)
     if (status === 401) handleLogout()
-  }, [deviceToken, ecg.connected, addLog, handleLogout])
+  }, [deviceToken, ecg.connected, manualMode, manualHr, addLog, handleLogout])
 
   // Toggle a preset on/off. Only one preset per vital is active; clicking the active
   // one disables it, clicking another switches. While active, the corresponding
