@@ -13,6 +13,8 @@ import type { ActiveAlarm, RealtimeBed } from "@/types/monitor"
 
 type Severity = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW"
 const SEVERITY_ORDER: Record<string, number> = { CRITICAL: 3, HIGH: 2, MEDIUM: 1, LOW: 0 }
+// CRITICAL speech 재안내 간격. ack/종료 시 자동 중단되고, 재발생 시 즉시 안내 재개.
+const SPEECH_REPEAT_MS = 15_000
 
 function alarmSignature(alarms: Record<string, ActiveAlarm> | undefined): string {
   if (!alarms) return ""
@@ -83,17 +85,31 @@ export function useAlarmSound(beds: RealtimeBed[] | undefined) {
     return () => stopAlarm()
   }, [])
 
-  // Speech 안내: (bed, alarm signature) 조합당 1회.
-  const announcedRef = useRef<Set<string>>(new Set())
+  // Speech 안내: unacked CRITICAL이 유지되는 동안 SPEECH_REPEAT_MS 주기로 반복.
+  // ack/종료되면 announceTargets에서 빠져 자동 중단되고, lastSpokenRef도 prune되어
+  // 같은 신호가 재발생하면 즉시 다시 안내된다.
+  const lastSpokenRef = useRef<Map<string, number>>(new Map())
   useEffect(() => {
-    for (const bed of announceTargets) {
-      const sig = alarmSignature(bed.active_alarms)
-      const key = `${bed.position}:${sig}`
-      if (announcedRef.current.has(key)) continue
-      announcedRef.current.add(key)
-      const label = bed.bed_label ?? `position ${bed.position}`
-      speakAlarm(`Bed ${label}, critical alarm`)
+    const speakDue = () => {
+      const now = Date.now()
+      const activeKeys = new Set<string>()
+      for (const bed of announceTargets) {
+        const sig = alarmSignature(bed.active_alarms)
+        const key = `${bed.position}:${sig}`
+        activeKeys.add(key)
+        const last = lastSpokenRef.current.get(key) ?? 0
+        if (now - last < SPEECH_REPEAT_MS) continue
+        lastSpokenRef.current.set(key, now)
+        const label = bed.bed_label ?? `position ${bed.position}`
+        speakAlarm(`Bed ${label}, critical alarm`)
+      }
+      for (const k of lastSpokenRef.current.keys()) {
+        if (!activeKeys.has(k)) lastSpokenRef.current.delete(k)
+      }
     }
+    speakDue()
+    const id = setInterval(speakDue, SPEECH_REPEAT_MS)
+    return () => clearInterval(id)
   }, [announceTargets])
 
   // 첫 클릭/터치 시 자동 unlock — 직접 URL로 진입한 경우 safety net.
