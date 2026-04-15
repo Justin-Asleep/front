@@ -18,15 +18,20 @@ import { apiGet, apiPost } from "@/services/api"
 import { useConfirm } from "@/components/ui/confirm"
 
 // ISO(UTC) → 브라우저 로컬 timezone 기준 포맷.
-// split("T")는 UTC 문자열을 그대로 잘라내 9시간 어긋남.
+// 백엔드가 "2026-04-15T15:30:45.123456"처럼 Z를 생략해 보내면 JS가 이를 local로
+// 해석해 변환이 일어나지 않는다. offset 표시가 없으면 UTC로 간주해 Z를 붙인다.
 const pad = (n: number) => String(n).padStart(2, "0")
+function parseIsoAsUtc(iso: string): Date {
+  if (iso.endsWith("Z") || /[+-]\d{2}:?\d{2}$/.test(iso)) return new Date(iso)
+  return new Date(iso + "Z")
+}
 function toLocalDate(iso: string): string {
-  const d = new Date(iso)
+  const d = parseIsoAsUtc(iso)
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 function toLocalDateTime(iso: string): string {
-  const d = new Date(iso)
-  return `${toLocalDate(iso)} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+  const d = parseIsoAsUtc(iso)
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
 
 interface EncounterWithPatient {
