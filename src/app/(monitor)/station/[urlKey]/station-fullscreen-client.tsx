@@ -7,6 +7,7 @@ import { BedMonitorCard } from "@/components/monitoring/bed-monitor-card"
 import type { StationRealtime } from "@/types/monitor"
 import { useRouter } from "next/navigation"
 import { useBedRealtimeSSE } from "@/hooks/use-bed-realtime-sse"
+import { useAlarmSound } from "@/hooks/use-alarm-sound"
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const CARD_MIN_WIDTH = 560
@@ -28,6 +29,8 @@ export function StationFullscreenClient({ urlKey }: { urlKey: string }) {
   const { data: realtimeData, connected, error } = useBedRealtimeSSE<StationRealtime>(
     `/sse/station/url/${urlKey}`
   )
+  // 사운드는 전체 beds 기준 (페이지 밖 critical도 알려야 함).
+  const { ackBed, isBedAcked } = useAlarmSound(realtimeData?.beds)
   const [currentPage, setCurrentPage] = useState(1)
   const [bedsPerPage, setBedsPerPage] = useState(12)
 
@@ -151,7 +154,12 @@ export function StationFullscreenClient({ urlKey }: { urlKey: string }) {
       <div className="flex-1 overflow-auto">
         <div className="grid gap-4" style={bedGridStyle}>
           {paginatedBeds.map((bed) => (
-            <BedMonitorCard key={bed.position} bed={bed} />
+            <BedMonitorCard
+              key={bed.position}
+              bed={bed}
+              isAcked={isBedAcked(bed)}
+              onAck={ackBed}
+            />
           ))}
         </div>
       </div>

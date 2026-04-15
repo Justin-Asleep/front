@@ -2,7 +2,7 @@
 
 import React from "react"
 import { cn } from "@/lib/utils"
-import { AlertTriangle } from "lucide-react"
+import { AlertTriangle, BellOff, Bell } from "lucide-react"
 import type { ActiveAlarm, RealtimeBed } from "@/types/monitor"
 import { EcgWaveform } from "@/components/monitoring/ecg-waveform"
 
@@ -52,7 +52,15 @@ function getHighestAlarm(alarms: Record<string, ActiveAlarm>): { severity: strin
 }
 
 // ── Bed Monitor Card ──────────────────────────────────────────────────────────
-export const BedMonitorCard = React.memo(function BedMonitorCard({ bed }: { bed: RealtimeBed }) {
+export const BedMonitorCard = React.memo(function BedMonitorCard({
+  bed,
+  isAcked,
+  onAck,
+}: {
+  bed: RealtimeBed
+  isAcked?: boolean
+  onAck?: (bed: RealtimeBed) => void
+}) {
   if (!bed.encounter_id) {
     return (
       <div className="rounded-lg shadow-[0px_4px_12px_0px_rgba(0,0,0,0.3)] bg-[#0a0b1a] border border-dashed border-[#2a2b45] flex flex-col items-center justify-center min-h-[180px] gap-2">
@@ -89,7 +97,7 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({ bed }: { bed:
     <div className={cn(
       "rounded-lg shadow-[0px_4px_12px_0px_rgba(0,0,0,0.3)] bg-[#0a0b1a] overflow-hidden flex flex-col min-h-[180px] border",
       alarm ? SEVERITY_BORDER[alarmSeverity] ?? "border-[#2a2b45]" : "border-[#2a2b45]",
-      isCritical && "animate-critical-pulse",
+      isCritical && !isAcked && "animate-critical-pulse",
     )}>
       {/* Alarm banner */}
       {alarm && (
@@ -99,7 +107,22 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({ bed }: { bed:
           SEVERITY_BANNER_TEXT[alarmSeverity],
         )}>
           <AlertTriangle className="size-3 shrink-0" />
-          <span className="text-[10px] font-bold truncate">{alarm.message}</span>
+          <span className="text-[10px] font-bold truncate flex-1">{alarm.message}</span>
+          {onAck && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onAck(bed) }}
+              aria-label={isAcked ? "Alarm silenced" : "Silence alarm"}
+              className={cn(
+                "flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold shrink-0 transition-opacity",
+                "bg-black/25 hover:bg-black/40",
+                isAcked && "opacity-60",
+              )}
+            >
+              {isAcked ? <BellOff className="size-3" /> : <Bell className="size-3" />}
+              {isAcked ? "Silenced" : "Ack"}
+            </button>
+          )}
         </div>
       )}
 

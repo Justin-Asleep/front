@@ -7,6 +7,7 @@ import { BedMonitorCard } from "@/components/monitoring/bed-monitor-card"
 import type { MonitorRealtime } from "@/types/monitor"
 import { useRouter } from "next/navigation"
 import { useBedRealtimeSSE } from "@/hooks/use-bed-realtime-sse"
+import { useAlarmSound } from "@/hooks/use-alarm-sound"
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const bedGridStyle = { gridTemplateColumns: `repeat(auto-fill, minmax(560px, 1fr))` }
@@ -17,6 +18,7 @@ export function MonitorFullscreenClient({ urlKey }: { urlKey: string }) {
   const { data: realtimeData, connected, error } = useBedRealtimeSSE<MonitorRealtime>(
     `/sse/monitor/url/${urlKey}`
   )
+  const { ackBed, isBedAcked } = useAlarmSound(realtimeData?.beds)
 
   const containerRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -143,7 +145,12 @@ export function MonitorFullscreenClient({ urlKey }: { urlKey: string }) {
           style={bedGridStyle}
         >
           {realtimeData?.beds.map((bed) => (
-            <BedMonitorCard key={bed.position} bed={bed} />
+            <BedMonitorCard
+              key={bed.position}
+              bed={bed}
+              isAcked={isBedAcked(bed)}
+              onAck={ackBed}
+            />
           ))}
         </div>
       </div>

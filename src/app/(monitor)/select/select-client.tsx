@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { apiGet } from "@/services/api"
 import { HeaderNav } from "@/components/layout/header-nav"
 import { Monitor, Tv } from "lucide-react"
+import { unlockAlarmAudio } from "@/lib/alarm-sound"
 
 interface StationItem {
   id: string
@@ -77,7 +78,7 @@ export function SelectClient() {
                 {stations.map((s) => (
                   <button
                     key={s.id}
-                    onClick={() => router.push(`/station/${s.url_key}`)}
+                    onClick={() => { unlockAlarmAudio(); router.push(`/station/${s.url_key}`) }}
                     className="flex flex-col items-center gap-2 p-5 rounded-xl bg-[#0a0b1a] border border-[#1e1f35] hover:border-[#2563eb] hover:bg-[#0d0e24] transition-all group"
                   >
                     <Tv className="size-8 text-[#555] group-hover:text-[#2563eb] transition-colors" />
@@ -104,7 +105,7 @@ export function SelectClient() {
                 {monitors.map((m) => (
                   <button
                     key={m.id}
-                    onClick={() => router.push(`/monitor/${m.url_key}`)}
+                    onClick={() => { unlockAlarmAudio(); router.push(`/monitor/${m.url_key}`) }}
                     className="flex flex-col items-center gap-2 p-5 rounded-xl bg-[#0a0b1a] border border-[#1e1f35] hover:border-[#22c55e] hover:bg-[#0d0e24] transition-all group"
                   >
                     <Monitor className="size-8 text-[#555] group-hover:text-[#22c55e] transition-colors" />
