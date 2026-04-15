@@ -660,12 +660,12 @@ export function TabletSampleClient() {
           {/* Vitals — grid fills remaining height */}
           <section className="flex-1 min-h-0 grid grid-cols-3 grid-rows-2 gap-3" aria-label="바이탈 사인">
             <VitalCard
-              label="Heart Rate" unit="bpm" Icon={Heart} accentColor="#FB7185"
+              label="Heart Rate" unit="bpm" Icon={Heart} accentColor="#22c55e"
               value={displayVitals.hr != null ? String(displayVitals.hr) : null}
               connected={ecg.connected}
             />
             <VitalCard
-              label="SpO₂" unit="%" Icon={Activity} accentColor="#22D3EE"
+              label="SpO₂" unit="%" Icon={Activity} accentColor="#38bdf8"
               value={displayVitals.spo2 != null ? String(displayVitals.spo2) : null}
               connected={spo2.connected}
             />
@@ -675,13 +675,13 @@ export function TabletSampleClient() {
               connected={spo2.connected}
             />
             <VitalCard
-              label="Temperature" unit="°C" Icon={Thermometer} accentColor="#FBBF24"
+              label="Temperature" unit="°C" Icon={Thermometer} accentColor="#a78bfb"
               value={displayVitals.temp != null ? String(displayVitals.temp) : null}
               connected={temp.connected}
             />
             <div className="col-span-2">
               <VitalCard
-                label="Blood Pressure" unit="mmHg" Icon={Stethoscope} accentColor="#818CF8"
+                label="Blood Pressure" unit="mmHg" Icon={Stethoscope} accentColor="#f87171"
                 value={bpText}
                 connected={bp.connected}
               >
