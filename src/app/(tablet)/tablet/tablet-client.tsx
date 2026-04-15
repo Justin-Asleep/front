@@ -46,30 +46,32 @@ function rand(min: number, max: number, dec = 0) {
 }
 
 // Alarm test values — just past each threshold boundary
-const ALARM_PRESETS: { vital: string; label: string; level: string; color: string; value: number; extra?: number }[] = [
+type VitalKey = "HR" | "SPO2" | "RR" | "TEMP" | "BP"
+type AlarmPreset = { vital: VitalKey; label: string; level: string; color: string; value: number; extra?: number }
+const ALARM_PRESETS: AlarmPreset[] = [
   // HR (sensor: ecg)
-  { vital: "HR", label: "HR↓", level: "High",     color: "bg-[#f97316]", value: 48 },
-  { vital: "HR", label: "HR↓↓", level: "Critical", color: "bg-[#dc2626]", value: 38 },
-  { vital: "HR", label: "HR↑", level: "High",     color: "bg-[#f97316]", value: 125 },
-  { vital: "HR", label: "HR↑↑", level: "Critical", color: "bg-[#dc2626]", value: 155 },
+  { vital: "HR", label: "Low",       level: "High",     color: "bg-[#f97316]", value: 48 },
+  { vital: "HR", label: "Crit Low",  level: "Critical", color: "bg-[#dc2626]", value: 38 },
+  { vital: "HR", label: "High",      level: "High",     color: "bg-[#f97316]", value: 125 },
+  { vital: "HR", label: "Crit High", level: "Critical", color: "bg-[#dc2626]", value: 155 },
   // SPO2 (sensor: spo2)
-  { vital: "SPO2", label: "SpO2↓", level: "High",     color: "bg-[#f97316]", value: 88 },
-  { vital: "SPO2", label: "SpO2↓↓", level: "Critical", color: "bg-[#dc2626]", value: 83 },
+  { vital: "SPO2", label: "Low",      level: "High",     color: "bg-[#f97316]", value: 88 },
+  { vital: "SPO2", label: "Crit Low", level: "Critical", color: "bg-[#dc2626]", value: 83 },
   // RR (sensor: spo2)
-  { vital: "RR", label: "RR↓", level: "High",     color: "bg-[#f97316]", value: 8 },
-  { vital: "RR", label: "RR↓↓", level: "Critical", color: "bg-[#dc2626]", value: 5 },
-  { vital: "RR", label: "RR↑", level: "High",     color: "bg-[#f97316]", value: 27 },
-  { vital: "RR", label: "RR↑↑", level: "Critical", color: "bg-[#dc2626]", value: 37 },
+  { vital: "RR", label: "Low",       level: "High",     color: "bg-[#f97316]", value: 8 },
+  { vital: "RR", label: "Crit Low",  level: "Critical", color: "bg-[#dc2626]", value: 5 },
+  { vital: "RR", label: "High",      level: "High",     color: "bg-[#f97316]", value: 27 },
+  { vital: "RR", label: "Crit High", level: "Critical", color: "bg-[#dc2626]", value: 37 },
   // TEMP (sensor: temp)
-  { vital: "TEMP", label: "T↓", level: "High",     color: "bg-[#f97316]", value: 35.3 },
-  { vital: "TEMP", label: "T↓↓", level: "Critical", color: "bg-[#dc2626]", value: 33.5 },
-  { vital: "TEMP", label: "T↑", level: "High",     color: "bg-[#f97316]", value: 38.5 },
-  { vital: "TEMP", label: "T↑↑", level: "Critical", color: "bg-[#dc2626]", value: 40.5 },
+  { vital: "TEMP", label: "Low",       level: "High",     color: "bg-[#f97316]", value: 35.3 },
+  { vital: "TEMP", label: "Crit Low",  level: "Critical", color: "bg-[#dc2626]", value: 33.5 },
+  { vital: "TEMP", label: "High",      level: "High",     color: "bg-[#f97316]", value: 38.5 },
+  { vital: "TEMP", label: "Crit High", level: "Critical", color: "bg-[#dc2626]", value: 40.5 },
   // BP (sensor: bp)
-  { vital: "BP", label: "BP↓", level: "High",     color: "bg-[#f97316]", value: 88, extra: 58 },
-  { vital: "BP", label: "BP↓↓", level: "Critical", color: "bg-[#dc2626]", value: 68, extra: 38 },
-  { vital: "BP", label: "BP↑", level: "High",     color: "bg-[#f97316]", value: 145, extra: 92 },
-  { vital: "BP", label: "BP↑↑", level: "Critical", color: "bg-[#dc2626]", value: 185, extra: 122 },
+  { vital: "BP", label: "Low",       level: "High",     color: "bg-[#f97316]", value: 88,  extra: 58 },
+  { vital: "BP", label: "Crit Low",  level: "Critical", color: "bg-[#dc2626]", value: 68,  extra: 38 },
+  { vital: "BP", label: "High",      level: "High",     color: "bg-[#f97316]", value: 145, extra: 92 },
+  { vital: "BP", label: "Crit High", level: "Critical", color: "bg-[#dc2626]", value: 185, extra: 122 },
 ]
 
 async function callIngest(
@@ -294,6 +296,12 @@ export function TabletSampleClient() {
   // View toggle (default bedside vs debug simulator)
   const [viewMode, setViewMode] = useState<"default" | "debug">("default")
 
+  // Active alarm presets per vital — while enabled, the corresponding auto-publisher
+  // substitutes the preset value into its normal observation stream instead of random/manual.
+  const [activeAlarms, setActiveAlarms] = useState<Partial<Record<VitalKey, AlarmPreset>>>({})
+  const activeAlarmsRef = useRef(activeAlarms)
+  useEffect(() => { activeAlarmsRef.current = activeAlarms }, [activeAlarms])
+
   // Display vitals — what the bedside screen shows; updated by each send
   const [displayVitals, setDisplayVitals] = useState<DisplayVitals>({
     hr: null, spo2: null, rr: null, temp: null, bpSys: null, bpDia: null,
@@ -315,6 +323,7 @@ export function TabletSampleClient() {
     setDeviceToken("")
     setLoginInfo(null)
     setAutoHeartbeat(false); setAutoEcg(false); setAutoSpo2(false); setAutoTemp(false); setAutoBp(false)
+    setActiveAlarms({})
     setViewMode("default")
     setDisplayVitals({ hr: null, spo2: null, rr: null, temp: null, bpSys: null, bpDia: null })
     localStorage.removeItem("tablet_session")
@@ -381,15 +390,18 @@ export function TabletSampleClient() {
 
   const sendHr = useCallback(async () => {
     if (!ecg.connected) return
-    const hr = manualMode ? manualHr : rand(65, 95)
+    const alarm = activeAlarmsRef.current.HR
+    const hr = alarm ? alarm.value : (manualMode ? manualHr : rand(65, 95))
     setDisplayVitals(v => ({ ...v, hr }))
     await postObservations("HR", [{ type: "HR", value: hr, extra_value: null, measured_at: new Date().toISOString() }])
   }, [ecg.connected, manualMode, manualHr, postObservations])
 
   const sendSpo2 = useCallback(async () => {
     if (!spo2.connected) return
-    const spo2v = manualMode ? manualSpo2 : rand(96, 100)
-    const rrv = manualMode ? manualRr : rand(14, 20)
+    const spo2Alarm = activeAlarmsRef.current.SPO2
+    const rrAlarm = activeAlarmsRef.current.RR
+    const spo2v = spo2Alarm ? spo2Alarm.value : (manualMode ? manualSpo2 : rand(96, 100))
+    const rrv = rrAlarm ? rrAlarm.value : (manualMode ? manualRr : rand(14, 20))
     setDisplayVitals(v => ({ ...v, spo2: spo2v, rr: rrv }))
     const now = new Date().toISOString()
     await postObservations("SpO2/RR", [
@@ -400,15 +412,17 @@ export function TabletSampleClient() {
 
   const sendTemp = useCallback(async () => {
     if (!temp.connected) return
-    const t = manualMode ? manualTemp : rand(36.0, 36.9, 1)
+    const alarm = activeAlarmsRef.current.TEMP
+    const t = alarm ? alarm.value : (manualMode ? manualTemp : rand(36.0, 36.9, 1))
     setDisplayVitals(v => ({ ...v, temp: t }))
     await postObservations("TEMP", [{ type: "TEMP", value: t, extra_value: null, measured_at: new Date().toISOString() }])
   }, [temp.connected, manualMode, manualTemp, postObservations])
 
   const sendBp = useCallback(async () => {
     if (!bp.connected) return
-    const sys = manualMode ? manualBpSys : rand(115, 130)
-    const dia = manualMode ? manualBpDia : rand(70, 82)
+    const alarm = activeAlarmsRef.current.BP
+    const sys = alarm ? alarm.value : (manualMode ? manualBpSys : rand(115, 130))
+    const dia = alarm?.extra != null ? alarm.extra : (manualMode ? manualBpDia : rand(70, 82))
     setDisplayVitals(v => ({ ...v, bpSys: sys, bpDia: dia }))
     await postObservations("BP", [{ type: "BP", value: sys, extra_value: dia, measured_at: new Date().toISOString() }])
   }, [bp.connected, manualMode, manualBpSys, manualBpDia, postObservations])
@@ -421,21 +435,18 @@ export function TabletSampleClient() {
     if (status === 401) handleLogout()
   }, [deviceToken, ecg.connected, addLog, handleLogout])
 
-  const sendAlarmTest = useCallback(async (preset: typeof ALARM_PRESETS[number]) => {
-    if (!deviceToken) return
-    const now = new Date().toISOString()
-    const body = {
-      observations: [{
-        type: preset.vital,
-        value: preset.value,
-        extra_value: preset.extra ?? null,
-        measured_at: now,
-      }],
-    }
-    const { data, status, error } = await callIngest("POST", "/ingest/v1/observations", body, { "X-Device-Token": deviceToken })
-    addLog(`Alarm ${preset.label}`, "POST", "/ingest/v1/observations", body, data, status, error)
-    if (status === 401) handleLogout()
-  }, [deviceToken, addLog, handleLogout])
+  // Toggle a preset on/off. Only one preset per vital is active; clicking the active
+  // one disables it, clicking another switches. While active, the corresponding
+  // auto-publisher streams the preset value each tick (no one-shot POST here).
+  const toggleAlarmPreset = useCallback((preset: AlarmPreset) => {
+    setActiveAlarms(prev => {
+      if (prev[preset.vital]?.label === preset.label) {
+        const { [preset.vital]: _removed, ...rest } = prev
+        return rest
+      }
+      return { ...prev, [preset.vital]: preset }
+    })
+  }, [])
 
   // ── Bed state SSE ──
   // After login, subscribe to this bed's stream so admission/discharge events
@@ -933,29 +944,40 @@ export function TabletSampleClient() {
             </div>
           </section>
 
-          {/* Alarm presets panel */}
+          {/* Alarm presets panel — click toggles continuous publishing of the preset value */}
           <section className="bg-slate-900/60 border border-slate-800 rounded-xl p-3">
             <h2 className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 mb-2">Alarm Presets</h2>
             <div className="grid grid-cols-5 gap-2">
               {(["HR", "SPO2", "RR", "TEMP", "BP"] as const).map(vital => {
                 const presets = ALARM_PRESETS.filter(p => p.vital === vital)
+                const active = activeAlarms[vital]
                 return (
                   <div key={vital} className="bg-slate-950/70 border border-slate-800 rounded-lg p-2">
                     <div className="text-[10px] font-semibold text-slate-400 mb-1.5">{vital}</div>
-                    <div className="flex flex-wrap gap-1">
-                      {presets.map(p => (
-                        <button
-                          key={p.label}
-                          onClick={() => sendAlarmTest(p)}
-                          className={cn(
-                            "px-1.5 py-0.5 rounded text-[9px] font-bold text-white transition-opacity hover:opacity-80 cursor-pointer",
-                            p.color,
-                          )}
-                          title={`${p.vital} = ${p.value}${p.extra != null ? `/${p.extra}` : ""} (${p.level})`}
-                        >
-                          {p.label}
-                        </button>
-                      ))}
+                    <div className="flex flex-col gap-1">
+                      {presets.map(p => {
+                        const isActive = active?.label === p.label
+                        return (
+                          <button
+                            key={p.label}
+                            type="button"
+                            aria-pressed={isActive}
+                            onClick={() => toggleAlarmPreset(p)}
+                            className={cn(
+                              "flex items-center justify-between gap-2 px-2 py-1.5 rounded text-[11px] font-bold text-white transition cursor-pointer",
+                              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-950",
+                              p.color,
+                              isActive ? "ring-2 ring-white/80 opacity-100" : "opacity-70 hover:opacity-100",
+                            )}
+                            title={`${p.vital} = ${p.value}${p.extra != null ? `/${p.extra}` : ""} (${p.level})`}
+                          >
+                            <span>{p.label}</span>
+                            <span className="font-mono tabular-nums opacity-90">
+                              {p.value}{p.extra != null ? `/${p.extra}` : ""}
+                            </span>
+                          </button>
+                        )
+                      })}
                     </div>
                   </div>
                 )
