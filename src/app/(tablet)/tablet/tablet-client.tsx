@@ -90,11 +90,11 @@ async function callIngest(
 
 // 1초 분량의 사람 ECG 파형 생성 (250Hz, ~72 BPM)
 // P파 → Q → R(피크) → S → T파 → 평평한 baseline 패턴 반복
-// startSampleIndex를 주면 청크 경계에서 비트 위상이 이어지며, 서맥(HR<60)에서도
-// 하나의 beat이 여러 청크에 걸쳐 자연스럽게 그려진다.
-function generateEcgSamples(count = 250, bpm = 72, startSampleIndex = 0): number[] {
-  const samplesPerBeat = Math.round((60 / bpm) * 250) // 한 박동 샘플 수
+// phaseStart(0~1)를 주면 청크 경계에서 beat 위상이 이어지며, bpm이 중간에 바뀌어도
+// 위상은 연속적으로 증가하므로 박동 모양이 일관되게 유지된다.
+function generateEcgSamples(count = 250, bpm = 72, phaseStart = 0): { samples: number[]; nextPhase: number } {
   const baseline = 512
+  const phaseStep = bpm / 60 / 250 // beats per sample (250Hz sample rate)
 
   // 박동 템플릿 (PQRST + isoelectric) — 0.0~1.0 정규화된 시간 내 위치
   const template = (t: number): number => {
@@ -126,12 +126,16 @@ function generateEcgSamples(count = 250, bpm = 72, startSampleIndex = 0): number
     return 0
   }
 
-  return Array.from({ length: count }, (_, i) => {
-    const beatProgress = ((startSampleIndex + i) % samplesPerBeat) / samplesPerBeat
-    const signal = template(beatProgress)
-    const noise = (Math.random() - 0.5) * 8
-    return Math.round((baseline + signal + noise) * 10) / 10
-  })
+  const samples: number[] = new Array(count)
+  let phase = phaseStart
+  for (let i = 0; i < count; i++) {
+    const t = phase - Math.floor(phase) // [0, 1)
+    const signal = template(t)
+    const noise = (Math.random() - 0.5) * 2
+    samples[i] = Math.round((baseline + signal + noise) * 10) / 10
+    phase += phaseStep
+  }
+  return { samples, nextPhase: phase - Math.floor(phase) }
 }
 
 
@@ -295,7 +299,7 @@ export function TabletSampleClient() {
   const currentHrRef = useRef<number>(72)
   // Running total of ECG samples emitted — preserves beat phase across 1s chunks so
   // low-HR bradycardia beats correctly span multiple publishes instead of restarting.
-  const ecgSampleIndexRef = useRef<number>(0)
+  const ecgPhaseRef = useRef<number>(0)
   const spo2Ref = useRef<ReturnType<typeof setInterval> | null>(null)
   const tempRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const bpRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -398,7 +402,7 @@ export function TabletSampleClient() {
   const sendHr = useCallback(async () => {
     if (!ecg.connected) return
     const alarm = activeAlarmsRef.current.HR
-    const hr = alarm ? alarm.value : (manualMode ? manualHr : rand(65, 95))
+    const hr = alarm ? alarm.value : (manualMode ? manualHr : rand(72, 80))
     currentHrRef.current = hr
     setDisplayVitals(v => ({ ...v, hr }))
     await postObservations("HR", [{ type: "HR", value: hr, extra_value: null, measured_at: new Date().toISOString() }])
@@ -440,8 +444,8 @@ export function TabletSampleClient() {
     // Alarm/manual values take effect immediately; random mode falls back to the last HR sendHr wrote
     const alarm = activeAlarmsRef.current.HR
     const hr = alarm ? alarm.value : (manualMode ? manualHr : currentHrRef.current)
-    const samples = generateEcgSamples(250, hr, ecgSampleIndexRef.current)
-    ecgSampleIndexRef.current += 250
+    const { samples, nextPhase } = generateEcgSamples(250, hr, ecgPhaseRef.current)
+    ecgPhaseRef.current = nextPhase
     const body = { waveforms: [{ measured_at: new Date().toISOString(), samples, sample_rate_hz: 250 }] }
     const { data, status, error } = await callIngest("POST", "/ingest/v1/ecg", body, { "X-Device-Token": deviceToken })
     addLog("ECG", "POST", "/ingest/v1/ecg", body, data, status, error)
