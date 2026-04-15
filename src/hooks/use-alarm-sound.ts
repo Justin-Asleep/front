@@ -57,6 +57,27 @@ export function useAlarmSound(beds: RealtimeBed[] | undefined) {
     else stopAlarm()
   }, [highest])
 
+  // Ack 상태 pruning — 현재 signature와 일치하지 않는 entry는 제거해서
+  // 알람이 종료되었다가 같은 조건으로 재발생할 때 ack이 유지되지 않도록 한다.
+  useEffect(() => {
+    if (!beds) return
+    setAckedSigs((prev) => {
+      const keys = Object.keys(prev)
+      if (keys.length === 0) return prev
+      const bedSig = new Map<number, string>()
+      for (const bed of beds) bedSig.set(bed.position, alarmSignature(bed.active_alarms))
+      let changed = false
+      const next: Record<number, string> = {}
+      for (const k of keys) {
+        const pos = Number(k)
+        const sig = bedSig.get(pos) ?? ""
+        if (sig !== "" && sig === prev[pos]) next[pos] = prev[pos]
+        else changed = true
+      }
+      return changed ? next : prev
+    })
+  }, [beds])
+
   // 언마운트 시 반드시 정지.
   useEffect(() => {
     return () => stopAlarm()
