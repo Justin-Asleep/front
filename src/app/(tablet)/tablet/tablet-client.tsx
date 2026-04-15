@@ -698,7 +698,7 @@ export function TabletSampleClient() {
               connected={spo2.connected}
             />
             <VitalCard
-              label="Respiratory Rate" unit="/min" Icon={Activity} accentColor="#34D399"
+              label="Respiratory Rate" unit="/min" Icon={Activity} accentColor="#fbbf24"
               value={displayVitals.rr != null ? String(displayVitals.rr) : null}
               connected={spo2.connected}
             />
