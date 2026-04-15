@@ -17,6 +17,18 @@ const AssignPatientModal = dynamic(
 import { apiGet, apiPost } from "@/services/api"
 import { useConfirm } from "@/components/ui/confirm"
 
+// ISO(UTC) → 브라우저 로컬 timezone 기준 포맷.
+// split("T")는 UTC 문자열을 그대로 잘라내 9시간 어긋남.
+const pad = (n: number) => String(n).padStart(2, "0")
+function toLocalDate(iso: string): string {
+  const d = new Date(iso)
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+function toLocalDateTime(iso: string): string {
+  const d = new Date(iso)
+  return `${toLocalDate(iso)} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
+
 interface EncounterWithPatient {
   encounter_id: string
   patient_id: string
@@ -166,7 +178,7 @@ export function AdmissionClient() {
         mrn: detail.patient_mrn,
         name: detail.patient_name,
         gender: detail.patient_gender ?? "",
-        admittedDate: detail.admitted_at.split("T")[0],
+        admittedDate: toLocalDate(detail.admitted_at),
         bed: detail.bed_label,
         ward: detail.ward_name,
         room: `Room ${detail.room_name}`,
@@ -179,7 +191,7 @@ export function AdmissionClient() {
           temp: detail.vitals.temp ?? 0,
           bp,
         },
-        vitalsUpdated: detail.vitals.measured_at?.split(".")[0].replace("T", " ") ?? "",
+        vitalsUpdated: detail.vitals.measured_at ? toLocalDateTime(detail.vitals.measured_at) : "",
         alarmNote: detail.latest_alarm ?? "No active alarms",
       })
     } catch (err) {
@@ -296,7 +308,7 @@ export function AdmissionClient() {
                               {bed.encounter.patient_name}
                             </p>
                             <p className="text-[10px] text-muted-foreground">
-                              {bed.encounter.admitted_at.split("T")[0]}
+                              {toLocalDate(bed.encounter.admitted_at)}
                             </p>
                           </div>
                         )
