@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
 import { apiGet } from "@/services/api"
+import { toLocalDate, toLocalGroupKey, toLocalHourMinute } from "@/helpers/format-date"
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type TimeRange = "1H" | "6H" | "12H" | "24H" | "7D"
@@ -109,8 +110,8 @@ function buildAreaPath(data: number[], w: number, h: number): string {
 function groupObservationsByTime(observations: ObservationItem[]) {
   const map = new Map<string, Record<string, string>>()
   for (const obs of observations) {
-    const time = obs.measured_at.slice(11, 16) // "HH:MM"
-    const key = obs.measured_at.slice(0, 16) // "YYYY-MM-DDTHH:MM" for sorting
+    const time = toLocalHourMinute(obs.measured_at)
+    const key = toLocalGroupKey(obs.measured_at) // 로컬 "YYYY-MM-DDTHH:MM" — 정렬 안정성 유지
     if (!map.has(key)) map.set(key, { time })
     const row = map.get(key)!
     if (obs.type === "BP") {
@@ -232,7 +233,7 @@ export function MeasurementClient() {
             <div>
               <p className="text-base font-bold text-foreground">{data.patient_name}</p>
               <p className="text-xs text-muted-foreground">
-                MRN: {data.patient_mrn} &nbsp;|&nbsp; {data.ward_name} - {data.bed_label} &nbsp;|&nbsp; Admitted: {data.admitted_at.split("T")[0]}
+                MRN: {data.patient_mrn} &nbsp;|&nbsp; {data.ward_name} - {data.bed_label} &nbsp;|&nbsp; Admitted: {toLocalDate(data.admitted_at)}
               </p>
             </div>
           </div>

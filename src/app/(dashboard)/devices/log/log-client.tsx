@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils"
 import { PaginationBar } from "@/components/ui/pagination-bar"
 import { SearchableSelect } from "@/components/ui/searchable-select"
 import { apiGet } from "@/services/api"
+import { parseIsoAsUtc } from "@/helpers/format-date"
 import { toast } from "sonner"
 
 interface DeviceLog {
@@ -118,7 +119,9 @@ export function DeviceLogClient() {
   }
 
   function formatTimestamp(iso: string) {
-    const d = new Date(iso)
+    // parseIsoAsUtc로 Z 없는 naive 포맷도 UTC로 간주. toLocaleString은 timeZone 옵션
+    // 없이 브라우저 로컬 timezone을 자동 사용.
+    const d = parseIsoAsUtc(iso)
     return d.toLocaleString("en-US", {
       month: "short", day: "2-digit",
       hour: "2-digit", minute: "2-digit", second: "2-digit",

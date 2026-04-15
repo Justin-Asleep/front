@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
 import { apiGet } from "@/services/api"
+import { toLocalDate, toLocalGroupKey, toLocalHourMinute } from "@/helpers/format-date"
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface VitalsDTO {
@@ -148,8 +149,8 @@ function calculateBarWidth(value: string, min: number, max: number): number {
 function groupObservationsByTime(observations: ObservationItem[]) {
   const map = new Map<string, Record<string, string>>()
   for (const obs of observations) {
-    const time = obs.measured_at.slice(11, 16)
-    const key = obs.measured_at.slice(0, 16)
+    const time = toLocalHourMinute(obs.measured_at)
+    const key = toLocalGroupKey(obs.measured_at)
     if (!map.has(key)) map.set(key, { time })
     const row = map.get(key)!
     if (obs.type === "BP") {
@@ -282,7 +283,7 @@ export function PatientMonitorClient() {
           <div className="flex-1">
             <p className="text-base font-bold text-foreground">{data.patient_name}</p>
             <p className="text-xs text-muted-foreground">
-              MRN: {data.patient_mrn} | {data.ward_name} - {data.bed_label} | Admitted: {data.admitted_at.split("T")[0]}
+              MRN: {data.patient_mrn} | {data.ward_name} - {data.bed_label} | Admitted: {toLocalDate(data.admitted_at)}
             </p>
           </div>
           <Badge className={cn("border-0 text-xs", statusClass)}>
