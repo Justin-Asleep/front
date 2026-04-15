@@ -24,7 +24,7 @@ export async function GET() {
         id: payload.sub,
         role: payload.role,
         hospital_id: payload.hospital_id,
-        timezone: payload.timezone
+        hospital_timezone: payload.hospital_timezone,
       },
       message: null,
     });
