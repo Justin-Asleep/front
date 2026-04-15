@@ -90,7 +90,9 @@ async function callIngest(
 
 // 1초 분량의 사람 ECG 파형 생성 (250Hz, ~72 BPM)
 // P파 → Q → R(피크) → S → T파 → 평평한 baseline 패턴 반복
-function generateEcgSamples(count = 250, bpm = 72): number[] {
+// startSampleIndex를 주면 청크 경계에서 비트 위상이 이어지며, 서맥(HR<60)에서도
+// 하나의 beat이 여러 청크에 걸쳐 자연스럽게 그려진다.
+function generateEcgSamples(count = 250, bpm = 72, startSampleIndex = 0): number[] {
   const samplesPerBeat = Math.round((60 / bpm) * 250) // 한 박동 샘플 수
   const baseline = 512
 
@@ -125,7 +127,7 @@ function generateEcgSamples(count = 250, bpm = 72): number[] {
   }
 
   return Array.from({ length: count }, (_, i) => {
-    const beatProgress = (i % samplesPerBeat) / samplesPerBeat
+    const beatProgress = ((startSampleIndex + i) % samplesPerBeat) / samplesPerBeat
     const signal = template(beatProgress)
     const noise = (Math.random() - 0.5) * 8
     return Math.round((baseline + signal + noise) * 10) / 10
@@ -291,6 +293,9 @@ export function TabletSampleClient() {
   const hrRef = useRef<ReturnType<typeof setInterval> | null>(null)
   // Latest HR value published — read by sendEcg so waveform BPM stays in sync
   const currentHrRef = useRef<number>(72)
+  // Running total of ECG samples emitted — preserves beat phase across 1s chunks so
+  // low-HR bradycardia beats correctly span multiple publishes instead of restarting.
+  const ecgSampleIndexRef = useRef<number>(0)
   const spo2Ref = useRef<ReturnType<typeof setInterval> | null>(null)
   const tempRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const bpRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -435,7 +440,9 @@ export function TabletSampleClient() {
     // Alarm/manual values take effect immediately; random mode falls back to the last HR sendHr wrote
     const alarm = activeAlarmsRef.current.HR
     const hr = alarm ? alarm.value : (manualMode ? manualHr : currentHrRef.current)
-    const body = { waveforms: [{ measured_at: new Date().toISOString(), samples: generateEcgSamples(250, hr), sample_rate_hz: 250 }] }
+    const samples = generateEcgSamples(250, hr, ecgSampleIndexRef.current)
+    ecgSampleIndexRef.current += 250
+    const body = { waveforms: [{ measured_at: new Date().toISOString(), samples, sample_rate_hz: 250 }] }
     const { data, status, error } = await callIngest("POST", "/ingest/v1/ecg", body, { "X-Device-Token": deviceToken })
     addLog("ECG", "POST", "/ingest/v1/ecg", body, data, status, error)
     if (status === 401) handleLogout()
