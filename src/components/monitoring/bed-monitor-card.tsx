@@ -128,25 +128,36 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({
 
       <div className="flex flex-1 min-h-0">
       {/* ── Left 1: Patient Info ── */}
-      <div className="flex flex-col w-[100px] shrink-0 border-r border-[#1e1f35] p-2.5 gap-1.5">
-        {/* Row 1: Location */}
-        <div className="flex items-baseline gap-1 min-w-0">
-          <span className="text-[10px] text-[#808099] truncate">{bed.ward_name ?? "--"}</span>
-          <span className="text-[10px] text-[#4a4b66]">·</span>
-          <span className="text-[10px] text-[#808099] truncate">{bed.room_name ?? "--"}</span>
-          <span className="text-[10px] text-[#4a4b66]">·</span>
-          <span className="text-[11px] font-bold text-[#b2b2cc] truncate">{bed.bed_label ?? "--"}</span>
+      <div className="flex flex-col w-[100px] shrink-0 border-r border-[#1e1f35] p-2 gap-1">
+        {/* Bed label — primary identifier (간호사가 가장 먼저 스캔) */}
+        <div className="inline-flex items-center self-start rounded-md bg-[#1e293b] border border-[#334155] px-1.5 py-0.5 max-w-full">
+          <span className="text-[14px] font-bold text-[#60a5fa] tracking-tight leading-none truncate" title={bed.bed_label ?? undefined}>
+            {bed.bed_label ?? "--"}
+          </span>
         </div>
 
-        {/* Row 2: Patient Name */}
-        <p className="text-[13px] font-semibold text-[#e5e5f0] leading-tight truncate">
+        {/* Patient name — secondary identity (높은 대비) */}
+        <p className="text-[13px] font-semibold text-white leading-tight truncate" title={bed.patient_name ?? undefined}>
           {bed.patient_name ?? "--"}
         </p>
 
-        {/* Row 3: Gender / Age */}
-        <p className="text-[10px] text-[#808099]">
-          {bed.patient_gender ?? "--"} / {bed.patient_age != null ? `${bed.patient_age} age` : "--"}
+        {/* Demographics — gender · age (간결) */}
+        <p className="text-[10px] text-[#cbd5e1] leading-tight">
+          {bed.patient_gender ?? "--"}
+          {bed.patient_age != null && (
+            <>
+              <span className="text-[#475569] mx-0.5">·</span>
+              <span>{bed.patient_age}y</span>
+            </>
+          )}
         </p>
+
+        {/* Location — tertiary, 하단 */}
+        <div className="mt-auto flex items-center gap-1 min-w-0 text-[9px] text-[#94a3b8] leading-tight">
+          <span className="truncate">{bed.ward_name ?? "--"}</span>
+          <span className="text-[#475569]">·</span>
+          <span className="truncate">{bed.room_name ?? "--"}</span>
+        </div>
       </div>
 
       {/* ── Left 2: HR + PVC ── */}
