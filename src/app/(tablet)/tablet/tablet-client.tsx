@@ -300,9 +300,6 @@ export function TabletSampleClient() {
   // Running total of ECG samples emitted — preserves beat phase across 1s chunks so
   // low-HR bradycardia beats correctly span multiple publishes instead of restarting.
   const ecgPhaseRef = useRef<number>(0)
-  // 직전 sendEcg 호출의 wall-clock 타임스탬프. setInterval drift를 elapsed ms로 흡수해
-  // 실효 sample rate가 250Hz 에 맞춰지도록 다음 청크 샘플 수를 역산한다.
-  const lastEcgSentAtRef = useRef<number>(0)
   const spo2Ref = useRef<ReturnType<typeof setInterval> | null>(null)
   const tempRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const bpRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -447,15 +444,7 @@ export function TabletSampleClient() {
     // Alarm/manual values take effect immediately; random mode falls back to the last HR sendHr wrote
     const alarm = activeAlarmsRef.current.HR
     const hr = alarm ? alarm.value : (manualMode ? manualHr : currentHrRef.current)
-    // 첫 호출은 250(1s) 그대로; 이후는 직전 호출로부터 실제 경과 ms에 맞춘 샘플 수 생성.
-    // Cap 2500(10s): tab throttling 복귀 시 과도한 catch-up 방지 (모니터의 gap-reset 로직이 이어받음).
-    const now = performance.now()
-    const last = lastEcgSentAtRef.current
-    const sampleCount = last === 0
-      ? 250
-      : Math.max(1, Math.min(2500, Math.round(((now - last) / 1000) * 250)))
-    lastEcgSentAtRef.current = now
-    const { samples, nextPhase } = generateEcgSamples(sampleCount, hr, ecgPhaseRef.current)
+    const { samples, nextPhase } = generateEcgSamples(250, hr, ecgPhaseRef.current)
     ecgPhaseRef.current = nextPhase
     const body = { waveforms: [{ measured_at: new Date().toISOString(), samples, sample_rate_hz: 250 }] }
     const { data, status, error } = await callIngest("POST", "/ingest/v1/ecg", body, { "X-Device-Token": deviceToken })
@@ -564,8 +553,6 @@ export function TabletSampleClient() {
   // ECG 패치 = 파형(1s) + HR observation(2s) 동시 게시
   useEffect(() => {
     if (autoEcg && isLoggedIn && ecg.connected) {
-      // 재시작 시 drift 보정용 타임스탬프를 리셋 — 첫 tick을 250샘플(1s)로 보내게.
-      lastEcgSentAtRef.current = 0
       const h1 = setTimeout(sendEcg, 0)
       const h2 = setTimeout(sendHr, 0)
       ecgRef.current = setInterval(sendEcg, ECG_INTERVAL)
