@@ -22,19 +22,19 @@ const SEVERITY_BORDER: Record<string, string> = {
   CRITICAL: "border-[#dc2626]",
   HIGH: "border-[#f97316]",
   MEDIUM: "border-[#eab308]",
-  LOW: "border-[#2a2b45]",
+  LOW: "border-[#1e293b]",
 }
 const SEVERITY_BANNER_BG: Record<string, string> = {
   CRITICAL: "bg-[#dc2626]",
   HIGH: "bg-[#f97316]",
   MEDIUM: "bg-[#eab308]",
-  LOW: "bg-[#2a2b45]",
+  LOW: "bg-[#1e293b]",
 }
 const SEVERITY_BANNER_TEXT: Record<string, string> = {
   CRITICAL: "text-white",
   HIGH: "text-white",
   MEDIUM: "text-[#0a0b1a]",
-  LOW: "text-[#808099]",
+  LOW: "text-[#94a3b8]",
 }
 
 function getHighestAlarm(alarms: Record<string, ActiveAlarm>): { severity: string; message: string } | null {
@@ -63,12 +63,12 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({
 }) {
   if (!bed.encounter_id) {
     return (
-      <div className="rounded-lg shadow-[0px_4px_12px_0px_rgba(0,0,0,0.3)] bg-[#0a0b1a] border border-dashed border-[#2a2b45] flex flex-col items-center justify-center min-h-[180px] gap-2">
-        <div className="w-10 h-10 rounded-full border border-dashed border-[#3b3b5c] flex items-center justify-center">
-          <span className="text-[18px] text-[#3b3b5c]">—</span>
+      <div className="rounded-lg shadow-[0px_4px_12px_0px_rgba(0,0,0,0.3)] bg-[#0a0b1a] border border-dashed border-[#1e293b] flex flex-col items-center justify-center min-h-[180px] gap-2">
+        <div className="w-10 h-10 rounded-full border border-dashed border-[#475569] flex items-center justify-center">
+          <span className="text-[18px] text-[#475569]">—</span>
         </div>
-        <p className="text-[13px] font-semibold text-[#4a4a6a]">{bed.bed_label ?? `Position ${bed.position}`}</p>
-        <p className="text-[11px] text-[#3b3b5c]">Empty Bed</p>
+        <p className="text-[13px] font-semibold text-[#94a3b8]">{bed.bed_label ?? `Position ${bed.position}`}</p>
+        <p className="text-[11px] text-[#64748b]">Empty Bed</p>
       </div>
     )
   }
@@ -76,12 +76,12 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({
   // vitals가 null이면 센서 미연결 상태
   if (!bed.vitals) {
     return (
-      <div className="rounded-lg shadow-[0px_4px_12px_0px_rgba(0,0,0,0.3)] bg-[#0a0b1a] border border-[#2a2b45] flex flex-col items-center justify-center min-h-[180px] gap-2">
-        <div className="w-10 h-10 rounded-full bg-[#1e1f35] flex items-center justify-center">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#555]" />
+      <div className="rounded-lg shadow-[0px_4px_12px_0px_rgba(0,0,0,0.3)] bg-[#0a0b1a] border border-[#1e293b] flex flex-col items-center justify-center min-h-[180px] gap-2">
+        <div className="w-10 h-10 rounded-full bg-[#1e293b] flex items-center justify-center">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#64748b]" />
         </div>
-        <p className="text-[13px] font-semibold text-[#b2b2cc]">{bed.bed_label}</p>
-        <p className="text-[11px] text-[#808099]">{bed.patient_name}</p>
+        <p className="text-[13px] font-semibold text-white">{bed.bed_label}</p>
+        <p className="text-[11px] text-[#94a3b8]">{bed.patient_name}</p>
         <p className="text-[10px] text-[#f87171]">No Data — Sensor Disconnected</p>
       </div>
     )
@@ -96,7 +96,7 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({
   return (
     <div className={cn(
       "rounded-lg shadow-[0px_4px_12px_0px_rgba(0,0,0,0.3)] bg-[#0a0b1a] overflow-hidden flex flex-col min-h-[180px] border",
-      alarm ? SEVERITY_BORDER[alarmSeverity] ?? "border-[#2a2b45]" : "border-[#2a2b45]",
+      alarm ? SEVERITY_BORDER[alarmSeverity] ?? "border-[#1e293b]" : "border-[#1e293b]",
       isCritical && !isAcked && "animate-critical-pulse",
     )}>
       {/* Alarm banner */}
@@ -128,7 +128,7 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({
 
       <div className="flex flex-1 min-h-0">
       {/* ── Left 1: Patient Info ── */}
-      <div className="flex flex-col w-[100px] shrink-0 border-r border-[#1e1f35] p-2 gap-1">
+      <div className="flex flex-col w-[100px] shrink-0 border-r border-[#1e293b] p-2 gap-1">
         {/* Bed label — primary identifier (간호사가 가장 먼저 스캔).
             Solid primary chip로 높은 시인성 — select 페이지 공통 accent(#2563eb)와 통일. */}
         <div className="inline-flex items-center self-start rounded-md bg-[#2563eb] px-2 py-0.5 max-w-full shadow-sm">
@@ -162,27 +162,27 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({
       </div>
 
       {/* ── Left 2: HR + PVC ── */}
-      <div className="flex flex-col w-[100px] shrink-0 border-r border-[#1e1f35]">
+      <div className="flex flex-col w-[100px] shrink-0 border-r border-[#1e293b]">
         <div className="flex-1 flex flex-col items-center justify-center p-2.5">
           <div className="flex items-baseline gap-1 mb-1">
             <span className="text-[11px] font-semibold text-[#22c55e]">HR</span>
-            <span className="text-[8px] text-[#808099]">bpm</span>
+            <span className="text-[8px] text-[#64748b]">bpm</span>
           </div>
-          <p className={cn("text-[42px] font-bold leading-none tracking-tight", v?.hr != null ? "text-[#22c55e]" : "text-[#333] animate-pulse")}>
+          <p className={cn("text-[42px] font-bold leading-none tracking-tight", v?.hr != null ? "text-[#22c55e]" : "text-[#475569] animate-pulse")}>
             {v?.hr != null ? <AnimatedValue value={Math.round(v.hr)} className="" /> : "--"}
           </p>
           {v?.hr_range && (
-            <span className="text-[9px] text-[#555] font-mono mt-1">
+            <span className="text-[9px] text-[#64748b] font-mono mt-1">
               {v.hr_range.low ?? "--"}-{v.hr_range.high ?? "--"}
             </span>
           )}
         </div>
-        <div className="border-t border-[#1e1f35] px-2.5 py-1.5 text-center">
+        <div className="border-t border-[#1e293b] px-2.5 py-1.5 text-center">
           <div className="flex items-baseline justify-center gap-0.5">
-            <span className="text-[9px] font-semibold text-[#555]">PVC</span>
-            <span className="text-[7px] text-[#555]">/min</span>
+            <span className="text-[10px] font-semibold text-[#64748b]">PVC</span>
+            <span className="text-[8px] text-[#64748b]">/min</span>
           </div>
-          <p className="text-[18px] font-bold leading-none text-[#555] mt-0.5">
+          <p className="text-[18px] font-bold leading-none text-[#64748b] mt-0.5">
             {v?.pvc != null ? v.pvc : "--"}
           </p>
         </div>
@@ -192,7 +192,7 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({
       <div className="flex-1 flex flex-col min-w-0">
         <div className="flex-1 flex flex-col min-h-[90px]">
           <div className="px-3 pt-2">
-            <span className="text-[10px] font-semibold text-[#4ade80]">ECG</span>
+            <span className="text-[10px] font-semibold text-[#22c55e]">ECG</span>
           </div>
           <div className="flex-1 flex items-center px-2">
             <EcgWaveform
@@ -202,43 +202,43 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({
           </div>
         </div>
 
-        <div className="flex border-t border-[#1e1f35]">
-          <div className="flex-1 border-r border-[#1e1f35] px-1.5 py-1.5">
+        <div className="flex border-t border-[#1e293b]">
+          <div className="flex-1 border-r border-[#1e293b] px-1.5 py-1.5">
             <div className="flex items-baseline gap-0.5">
-              <span className="text-[9px] font-semibold text-[#fbbf24]">RESP</span>
-              <span className="text-[7px] text-[#555]">/min</span>
+              <span className="text-[10px] font-semibold text-[#fbbf24]">RESP</span>
+              <span className="text-[8px] text-[#64748b]">/min</span>
             </div>
-            <p className={cn("text-[18px] font-bold leading-none mt-0.5", v?.rr != null ? "text-[#fbbf24]" : "text-[#333] animate-pulse")}>
+            <p className={cn("text-[18px] font-bold leading-none mt-0.5", v?.rr != null ? "text-[#fbbf24]" : "text-[#475569] animate-pulse")}>
               {v?.rr != null ? <AnimatedValue value={Math.round(v.rr)} className="" /> : "--"}
             </p>
           </div>
 
-          <div className="flex-1 border-r border-[#1e1f35] px-1.5 py-1.5">
+          <div className="flex-1 border-r border-[#1e293b] px-1.5 py-1.5">
             <div className="flex items-baseline gap-0.5">
-              <span className="text-[9px] font-semibold text-[#38bdf8]">SpO2</span>
-              <span className="text-[7px] text-[#555]">%</span>
+              <span className="text-[10px] font-semibold text-[#38bdf8]">SpO2</span>
+              <span className="text-[8px] text-[#64748b]">%</span>
             </div>
-            <p className={cn("text-[18px] font-bold leading-none mt-0.5", v?.spo2 != null ? "text-[#38bdf8]" : "text-[#333] animate-pulse")}>
+            <p className={cn("text-[18px] font-bold leading-none mt-0.5", v?.spo2 != null ? "text-[#38bdf8]" : "text-[#475569] animate-pulse")}>
               {v?.spo2 != null ? <AnimatedValue value={Math.round(v.spo2)} className="" /> : "--"}
             </p>
           </div>
 
-          <div className="flex-1 border-r border-[#1e1f35] px-1.5 py-1.5">
+          <div className="flex-1 border-r border-[#1e293b] px-1.5 py-1.5">
             <div className="flex items-baseline gap-0.5">
-              <span className="text-[9px] font-semibold text-[#a78bfb]">Temp</span>
-              <span className="text-[7px] text-[#555]">°C</span>
+              <span className="text-[10px] font-semibold text-[#a78bfb]">Temp</span>
+              <span className="text-[8px] text-[#64748b]">°C</span>
             </div>
-            <p className={cn("text-[18px] font-bold leading-none mt-0.5", v?.temp != null ? "text-[#a78bfb]" : "text-[#333] animate-pulse")}>
+            <p className={cn("text-[18px] font-bold leading-none mt-0.5", v?.temp != null ? "text-[#a78bfb]" : "text-[#475569] animate-pulse")}>
               {v?.temp != null ? <AnimatedValue value={v.temp.toFixed(1)} className="" /> : "--"}
             </p>
           </div>
 
           <div className="flex-1 px-1.5 py-1.5">
             <div className="flex items-baseline gap-0.5">
-              <span className="text-[9px] font-semibold text-[#f87171]">NBP</span>
-              <span className="text-[7px] text-[#555]">mmHg</span>
+              <span className="text-[10px] font-semibold text-[#f87171]">NBP</span>
+              <span className="text-[8px] text-[#64748b]">mmHg</span>
             </div>
-            <p className={cn("text-[16px] font-bold leading-none mt-0.5", v?.bp_systolic != null ? "text-[#f87171]" : "text-[#333] animate-pulse")}>
+            <p className={cn("text-[16px] font-bold leading-none mt-0.5", v?.bp_systolic != null ? "text-[#f87171]" : "text-[#475569] animate-pulse")}>
               {v?.bp_systolic != null
                 ? <AnimatedValue value={`${Math.round(v.bp_systolic)}/${Math.round(v.bp_diastolic ?? 0)}`} className="" />
                 : "--"}
@@ -248,10 +248,10 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({
       </div>
 
       {/* ── Right: EWS + Device Status ── */}
-      <div className="flex flex-col w-[80px] shrink-0 border-l border-[#1e1f35]">
-        <div className="flex flex-col items-center justify-center border-b border-[#1e1f35] px-2 py-1.5">
-          <span className="text-[9px] font-semibold text-[#555] mb-0.5">EWS</span>
-          <p className="text-[22px] font-bold leading-none text-[#555]">
+      <div className="flex flex-col w-[80px] shrink-0 border-l border-[#1e293b]">
+        <div className="flex flex-col items-center justify-center border-b border-[#1e293b] px-2 py-1.5">
+          <span className="text-[10px] font-semibold text-[#64748b] mb-0.5">EWS</span>
+          <p className="text-[22px] font-bold leading-none text-[#64748b]">
             {v?.ews != null ? v.ews : "--"}
           </p>
         </div>
@@ -259,30 +259,30 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({
           <div className="flex items-center gap-1">
             <span className={cn(
               "w-2 h-2 rounded-full",
-              t?.is_online ? "bg-[#22c55e]" : "bg-[#555]"
+              t?.is_online ? "bg-[#22c55e]" : "bg-[#475569]"
             )} />
-            <span className="text-[9px] text-[#808099]">
+            <span className="text-[9px] text-[#94a3b8]">
               {t ? (t.is_online ? "Online" : "Offline") : "--"}
             </span>
           </div>
           {t?.battery != null && (
             <div className="flex items-center gap-1">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" className="text-[#808099]">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" className="text-[#94a3b8]">
                 <rect x="1" y="6" width="18" height="12" rx="2" stroke="currentColor" strokeWidth="2"/>
                 <line x1="23" y1="10" x2="23" y2="14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
               </svg>
-              <span className="text-[8px] text-[#808099]">{t.battery}%</span>
+              <span className="text-[8px] text-[#94a3b8]">{t.battery}%</span>
             </div>
           )}
-          <div className="w-full border-t border-[#1e1f35] my-0.5" />
+          <div className="w-full border-t border-[#1e293b] my-0.5" />
           {[
             { label: "ECG", s: t?.ecg },
             { label: "SpO2", s: t?.spo2 },
             { label: "Temp", s: t?.temp },
           ].map(({ label, s }) => (
             <div key={label} className="flex items-center justify-between w-full px-0.5">
-              <span className={cn("text-[8px]", s?.connected ? "text-[#808099]" : "text-[#444]")}>{label}</span>
-              <span className={cn("text-[8px]", s?.connected ? "text-[#808099]" : "text-[#444]")}>
+              <span className={cn("text-[8px]", s?.connected ? "text-[#94a3b8]" : "text-[#475569]")}>{label}</span>
+              <span className={cn("text-[8px]", s?.connected ? "text-[#94a3b8]" : "text-[#475569]")}>
                 {s?.connected ? `${s.battery_level ?? "--"}%` : "--"}
               </span>
             </div>
