@@ -129,9 +129,10 @@ export const BedMonitorCard = React.memo(function BedMonitorCard({
       <div className="flex flex-1 min-h-0">
       {/* ── Left 1: Patient Info ── */}
       <div className="flex flex-col w-[100px] shrink-0 border-r border-[#1e1f35] p-2 gap-1">
-        {/* Bed label — primary identifier (간호사가 가장 먼저 스캔) */}
-        <div className="inline-flex items-center self-start rounded-md bg-[#1e293b] border border-[#334155] px-1.5 py-0.5 max-w-full">
-          <span className="text-[14px] font-bold text-[#60a5fa] tracking-tight leading-none truncate" title={bed.bed_label ?? undefined}>
+        {/* Bed label — primary identifier (간호사가 가장 먼저 스캔).
+            Solid primary chip로 높은 시인성 — select 페이지 공통 accent(#2563eb)와 통일. */}
+        <div className="inline-flex items-center self-start rounded-md bg-[#2563eb] px-2 py-0.5 max-w-full shadow-sm">
+          <span className="text-[14px] font-bold text-white tracking-tight leading-none truncate" title={bed.bed_label ?? undefined}>
             {bed.bed_label ?? "--"}
           </span>
         </div>
