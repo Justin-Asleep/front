@@ -15,6 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { DatePicker } from "@/components/ui/date-picker"
+import { toLocalDate } from "@/helpers/format-date"
 
 type PatientFormData = {
   mrn: string
@@ -104,11 +106,11 @@ export function AddPatientModal({ open, onOpenChange, onSubmit }: Props) {
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-1.5">
               <label className="text-[13px] font-medium text-[#111827]">Date of Birth</label>
-              <Input
-                placeholder="YYYY-MM-DD"
+              <DatePicker
                 value={form.dob}
-                onChange={(e) => handleChange("dob", e.target.value)}
-                className="h-10 border-[#d1d5db] text-[14px]"
+                onChange={(v) => handleChange("dob", v)}
+                max={toLocalDate(new Date().toISOString())}
+                placeholder="YYYY-MM-DD"
               />
             </div>
             <div className="space-y-1.5">

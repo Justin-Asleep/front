@@ -17,8 +17,16 @@ import {
 import { Search, Pencil, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { PaginationBar } from "@/components/ui/pagination-bar"
-import { AddPatientModal } from "@/components/patients/add-patient-modal"
-import { EditPatientModal } from "@/components/patients/edit-patient-modal"
+import dynamic from "next/dynamic"
+// react-day-picker/date-fns를 모달 chunk로 격리 — 리스트 페이지 초기 번들에서 제외
+const AddPatientModal = dynamic(
+  () => import("@/components/patients/add-patient-modal").then((m) => ({ default: m.AddPatientModal })),
+  { ssr: false }
+)
+const EditPatientModal = dynamic(
+  () => import("@/components/patients/edit-patient-modal").then((m) => ({ default: m.EditPatientModal })),
+  { ssr: false }
+)
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog"
 import { apiGet, apiPost, apiPatch, apiDelete, ApiError } from "@/services/api"
 import { toast } from "sonner"
