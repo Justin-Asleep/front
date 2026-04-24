@@ -15,6 +15,10 @@ export interface EcgRenderState {
 export const DISPLAY_SAMPLES = 1500
 const GAP_SAMPLES = 30
 const SAMPLES_PER_SEC = 250
+// Producer가 setInterval drift / 네트워크 jitter로 청크를 최대 ~400ms 늦게 보내도 커서가
+// totalReceived를 따라잡고 멈추지 않도록 수신측에서 100 samples(400ms) 뒤에서 추적한다.
+// 표시는 항상 실제보다 400ms 지연되지만 waveform 연속성을 확보.
+const JITTER_BUFFER_SAMPLES = 100
 
 // Fixed vertical scale (clinical ECG convention — 10mm/mV 고정 gain)
 const ECG_MIN = 200
@@ -58,11 +62,14 @@ function renderBed(state: EcgRenderState, deltaSec: number) {
   // ResizeObserver 첫 fire 전에는 backing store가 미확정 — skip
   if (width <= 0 || height <= 0) return
 
-  // displayedCount를 target까지 초당 250 samples 속도로 전진
+  // displayedCount를 cursorTarget까지 초당 250 samples 속도로 전진.
+  // cursorTarget = totalReceived - JITTER_BUFFER_SAMPLES 로 실시간 totalReceived보다
+  // 400ms 뒤에서 커서가 달리게 해 producer 지연을 headroom으로 흡수.
   const target = getTargetCount()
+  const cursorTarget = Math.max(0, target - JITTER_BUFFER_SAMPLES)
   const displayed = getDisplayedCount()
-  if (displayed < target) {
-    setDisplayedCount(Math.min(displayed + SAMPLES_PER_SEC * deltaSec, target))
+  if (displayed < cursorTarget) {
+    setDisplayedCount(Math.min(displayed + SAMPLES_PER_SEC * deltaSec, cursorTarget))
   }
 
   // 샘플이 비어있으면 캔버스를 비워두고 끝 — flat line 은 asystole 패턴이라 금지.
