@@ -110,9 +110,7 @@ export function RegisterTabletModal({ open, onOpenChange, beds, onRegister }: Pr
               <div className="flex justify-center py-2">
                 <div className="bg-white p-3 rounded-lg border border-[#e5e7eb]">
                   <QRCodeSVG
-                    value={typeof window !== "undefined"
-                      ? `${window.location.origin}/tablet?serial=${encodeURIComponent(result.serial_number)}&secret=${encodeURIComponent(result.device_secret)}`
-                      : ""}
+                    value={`vitalmonitor://login?serial=${encodeURIComponent(result.serial_number)}&secret=${encodeURIComponent(result.device_secret)}`}
                     size={160}
                     level="M"
                   />

@@ -118,8 +118,8 @@ export function EditTabletModal({ open, onOpenChange, tablet, beds, onSave }: Pr
             <div className="flex justify-center py-2">
               <div className="bg-white p-3 rounded-lg border border-[#e5e7eb]">
                 <QRCodeSVG
-                  value={typeof window !== "undefined" && tablet?.serial_number
-                    ? `${window.location.origin}/tablet?serial=${encodeURIComponent(tablet.serial_number)}&secret=${encodeURIComponent(newSecret)}`
+                  value={tablet?.serial_number
+                    ? `vitalmonitor://login?serial=${encodeURIComponent(tablet.serial_number)}&secret=${encodeURIComponent(newSecret)}`
                     : ""}
                   size={160}
                   level="M"
